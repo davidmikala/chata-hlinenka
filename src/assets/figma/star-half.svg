@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Star rating">
+<path id="Star empty" d="M10 0L12.8919 6.01964L19.5106 6.90983L14.6792 11.5204L15.8779 18.0902L10 14.92L4.12215 18.0902L5.3208 11.5204L0.489435 6.90983L7.1081 6.01964L10 0Z" fill="#FFBD3E"/>
+<path id="Subtract" d="M4.12215 18.0898L4.13875 18H4.28914L4.12215 18.0898ZM12.8917 6.01953L19.5108 6.91016L14.6788 11.5205L15.878 18.0898L10.0001 14.9199V0L12.8917 6.01953Z" fill="#C2C2C2"/>
+</g>
+</svg>

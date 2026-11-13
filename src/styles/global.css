@@ -1,0 +1,267 @@
+/* =========================================================
+   Chata Hliněnka – design tokeny (z Figmy) a základní styly
+   ========================================================= */
+:root {
+  /* barvy */
+  --bg-extra-light: #fffdf9;
+  --bg-light: #ece8e1;
+  --black: #000;
+  --white: #fff;
+  --gold: #c4a585;
+  --brown: #a2845e;
+  --brown-dark: #84643b;
+  --green-dark: #08271d;
+  --primary: #3b9b86;
+  --primary-hover: #2f8270;
+  --grey: #c2c2c2;
+  --grey-dark: #767676;
+  --grey-system: #8e8e93;
+  --grey-light: #f4f4f4;
+  --text-muted: rgba(0, 0, 0, 0.7);
+  --text-stat: #5c5954;
+  --star: #ffbd3e;
+
+  /* typografie */
+  --font-sans: 'Lato', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+
+  --fs-h1: clamp(2.25rem, 1.3rem + 3.6vw, 3.75rem); /* 60px */
+  --fs-h2: clamp(2rem, 1.45rem + 2.1vw, 2.875rem); /* 46px */
+  --fs-h3: clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem); /* 30px */
+  --fs-lead: clamp(1rem, 0.95rem + 0.3vw, 1.125rem); /* 18px */
+
+  /* layout */
+  --container: 1140px;
+  --gutter: 24px;
+  --section-y: clamp(72px, 6vw + 40px, 120px);
+  --radius: 10px;
+  --header-h: 84px;
+
+  /* pohyb */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--black);
+  background: var(--bg-extra-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body.is-locked {
+  overflow: hidden;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--white);
+}
+
+/* ---------- layout helpers ---------- */
+.container {
+  width: 100%;
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  position: relative;
+  padding-block: var(--section-y);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- typografie ---------- */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-h1);
+  line-height: 1.1;
+}
+
+.h2 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-h2);
+  line-height: 1.1;
+}
+
+.h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-h3);
+  line-height: 1.1;
+}
+
+.lead {
+  font-size: var(--fs-lead);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Nadpis sekce (Subheader + H2 + Paragraph) */
+.section-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: var(--container);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.section-head__titles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-head .lead {
+  max-width: 880px;
+}
+
+/* ---------- reveal animace ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 32px, 0);
+  transition:
+    opacity 0.9s var(--ease-out),
+    transform 0.9s var(--ease-out);
+  transition-delay: var(--d, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-reveal='fade'] {
+  transform: none;
+}
+
+[data-reveal='left'] {
+  transform: translate3d(-48px, 0, 0);
+}
+
+[data-reveal='right'] {
+  transform: translate3d(48px, 0, 0);
+}
+
+[data-reveal='zoom'] {
+  transform: scale(0.94);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* odhalení obrázku clip-pathem */
+[data-reveal='clip'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* clip-path je na <img>, ne na obalu – jinak by ho IntersectionObserver
+   považoval za neviditelný a animace by se nikdy nespustila */
+[data-reveal='clip'] > img {
+  clip-path: inset(100% 0 0 0);
+}
+
+[data-reveal='clip'].is-visible > img {
+  animation: clip-reveal 1.3s var(--ease-out) var(--d, 0ms) both;
+}
+
+@keyframes clip-reveal {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 600px) {
+  html {
+    scroll-padding-top: 76px;
+  }
+  .eyebrow {
+    letter-spacing: 4px;
+  }
+}

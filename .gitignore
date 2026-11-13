@@ -1,0 +1,6 @@
+node_modules
+dist
+*.local
+
+# originální exporty z Figmy (~120 MB) – web používá optimalizované WebP v src/assets
+design-assets/

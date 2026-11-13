@@ -1,0 +1,90 @@
+import { useRef } from 'react';
+import treeWhite from '../assets/figma/tree-white.svg';
+import treeBlack from '../assets/figma/tree-black.svg';
+import './ui.css';
+
+/**
+ * Tlačítko „REZERVOVAT →“ ve třech variantách z Figmy:
+ *  - light  : bílý rámeček na tmavém pozadí
+ *  - dark   : černý rámeček na světlém pozadí
+ *  - primary: plné zelené tlačítko
+ */
+export function ReserveButton({ variant = 'light', size = 'lg', href = '#rezervace', children = 'Rezervovat', className = '' }) {
+  return (
+    <a href={href} className={`btn btn--${variant} btn--${size} ${className}`}>
+      <span className="btn__label">{children}</span>
+      <span className="btn__arrow" aria-hidden="true">
+        →
+      </span>
+    </a>
+  );
+}
+
+/** Nadpis sekce: eyebrow + H2 + volitelný odstavec */
+export function SectionHead({ eyebrow, title, children, tone = 'dark', className = '', as: Tag = 'h2' }) {
+  return (
+    <div className={`section-head section-head--${tone} ${className}`}>
+      <div className="section-head__titles">
+        {eyebrow && (
+          <p className="eyebrow" data-reveal>
+            {eyebrow}
+          </p>
+        )}
+        <Tag className="h2" data-reveal style={{ '--d': '80ms' }}>
+          {title}
+        </Tag>
+      </div>
+      {children && (
+        <div className="lead" data-reveal style={{ '--d': '160ms' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Ikona stromu dole v sekci – po kliknutí plynule posune stránku
+ * na začátek následující sekce.
+ */
+export function ScrollCue({ tone = 'light', size = 45, className = '' }) {
+  const ref = useRef(null);
+
+  const handleClick = () => {
+    const section = ref.current?.closest('section, header');
+    const next = section?.nextElementSibling ?? document.querySelector('footer');
+    next?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`scroll-cue scroll-cue--${tone} ${className}`}
+      onClick={handleClick}
+      aria-label="Přejít na další sekci"
+    >
+      <img src={tone === 'light' ? treeWhite : treeBlack} width={size} height={size} alt="" />
+    </button>
+  );
+}
+
+/** Kulaté tlačítko se šipkou (slidery) */
+export function ArrowButton({ direction = 'next', tone = 'dark', onClick, disabled, label }) {
+  return (
+    <button
+      type="button"
+      className={`arrow-btn arrow-btn--${tone}`}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label ?? (direction === 'next' ? 'Další' : 'Předchozí')}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style={direction === 'prev' ? { transform: 'scaleX(-1)' } : undefined}>
+        <path
+          d="M14.0306 8.53063L9.53063 13.0306C9.38973 13.1715 9.19863 13.2507 8.99938 13.2507C8.80012 13.2507 8.60902 13.1715 8.46813 13.0306C8.32723 12.8897 8.24807 12.6986 8.24807 12.4994C8.24807 12.3001 8.32723 12.109 8.46813 11.9681L11.6875 8.75H2.5C2.30109 8.75 2.11032 8.67098 1.96967 8.53033C1.82902 8.38968 1.75 8.19891 1.75 8C1.75 7.80109 1.82902 7.61032 1.96967 7.46967C2.11032 7.32902 2.30109 7.25 2.5 7.25H11.6875L8.46937 4.03C8.32848 3.8891 8.24932 3.69801 8.24932 3.49875C8.24932 3.29949 8.32848 3.1084 8.46937 2.9675C8.61027 2.8266 8.80137 2.74745 9.00062 2.74745C9.19988 2.74745 9.39098 2.8266 9.53187 2.9675L14.0319 7.4675C14.1018 7.53727 14.1573 7.62017 14.1951 7.71144C14.2329 7.8027 14.2523 7.90054 14.2522 7.99932C14.252 8.09811 14.2324 8.1959 14.1944 8.28707C14.1564 8.37825 14.1007 8.46102 14.0306 8.53063Z"
+          fill="currentColor"
+        />
+      </svg>
+    </button>
+  );
+}

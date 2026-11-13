@@ -1,0 +1,204 @@
+/* ---------- REZERVOVAT tlačítko ---------- */
+.btn {
+  --btn-fg: var(--white);
+  --btn-border: var(--bg-extra-light);
+  --btn-bg: transparent;
+  --btn-fg-hover: var(--green-dark);
+  --btn-bg-hover: var(--bg-extra-light);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 62px;
+  min-width: 227px;
+  padding: 0 28px;
+  font-family: var(--font-sans);
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    color 0.45s var(--ease-out),
+    border-color 0.45s var(--ease-out),
+    box-shadow 0.45s var(--ease-out),
+    transform 0.45s var(--ease-out);
+}
+
+/* výplň, která se „nalije“ zespodu */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--btn-bg-hover);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.45s var(--ease-out);
+}
+
+.btn:hover,
+.btn:focus-visible {
+  color: var(--btn-fg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.45);
+}
+
+.btn:hover::before,
+.btn:focus-visible::before {
+  transform: scaleY(1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn__arrow {
+  display: inline-block;
+  transition: transform 0.45s var(--ease-out);
+}
+
+.btn:hover .btn__arrow {
+  transform: translateX(6px);
+}
+
+.btn--dark {
+  --btn-fg: var(--black);
+  --btn-border: var(--black);
+  --btn-fg-hover: var(--bg-extra-light);
+  --btn-bg-hover: var(--black);
+}
+
+.btn--primary {
+  --btn-fg: var(--white);
+  --btn-border: var(--primary);
+  --btn-bg: var(--primary);
+  --btn-fg-hover: var(--white);
+  --btn-bg-hover: var(--primary-hover);
+}
+
+.btn--primary:hover {
+  border-color: var(--primary-hover);
+}
+
+.btn--md {
+  height: 57px;
+  min-width: 207px;
+  font-size: 22px;
+}
+
+.btn--sm {
+  height: 48px;
+  min-width: 0;
+  padding: 0 20px;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .btn {
+    height: 56px;
+    min-width: 210px;
+    font-size: 20px;
+  }
+}
+
+/* ---------- strom – posun na další sekci ---------- */
+.scroll-cue {
+  display: inline-grid;
+  place-items: center;
+  padding: 8px;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  animation: cue-bob 2.6s var(--ease-in-out) infinite;
+  transition: transform 0.35s var(--ease-out);
+}
+
+.scroll-cue img {
+  transition: transform 0.35s var(--ease-out), filter 0.35s;
+}
+
+.scroll-cue:hover {
+  animation-play-state: paused;
+}
+
+.scroll-cue:hover img {
+  transform: translateY(6px) scale(1.12);
+}
+
+.scroll-cue--light:hover img {
+  filter: drop-shadow(0 0 10px rgba(255, 253, 249, 0.6));
+}
+
+@keyframes cue-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- kulaté šipky ---------- */
+.arrow-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border-radius: 100px;
+  background: transparent;
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out),
+    opacity 0.3s;
+}
+
+.arrow-btn svg {
+  transition: transform 0.3s var(--ease-out);
+}
+
+.arrow-btn--dark {
+  color: var(--black);
+  border: 1px solid var(--grey);
+}
+
+.arrow-btn--dark:not(:disabled):hover {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.arrow-btn--light {
+  color: var(--bg-extra-light);
+  border: 1px solid var(--bg-extra-light);
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.arrow-btn--light:not(:disabled):hover {
+  background: var(--bg-extra-light);
+  color: var(--black);
+}
+
+.arrow-btn:not(:disabled):hover {
+  transform: scale(1.06);
+}
+
+.arrow-btn:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.arrow-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

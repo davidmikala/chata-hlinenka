@@ -1,0 +1,105 @@
+.intro {
+  overflow: hidden;
+  padding-top: 68px;
+  padding-bottom: 100px;
+}
+
+/* dekorativní tah štětcem (vektor z Figmy, otočený o 90°) */
+.intro__brush {
+  position: absolute;
+  top: 11.61%;
+  left: -46.89%;
+  width: 202.7%;
+  height: 76.7%;
+  container-type: size;
+  pointer-events: none;
+  opacity: 0.22;
+}
+
+.intro__brush img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100cqh;
+  height: 100cqw;
+  max-width: none;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.intro__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+}
+
+.intro__grid {
+  display: flex;
+  gap: var(--gutter);
+}
+
+.intro__col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+}
+
+.intro__img {
+  margin: 0;
+  height: 350px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-light);
+}
+
+.intro__img.is-tall {
+  height: 520px;
+}
+
+.intro__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s var(--ease-out);
+}
+
+.intro__img:hover img {
+  transform: scale(1.06);
+}
+
+@media (max-width: 900px) {
+  .intro__inner {
+    gap: 48px;
+  }
+  .intro__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .intro__col {
+    display: contents;
+  }
+  .intro__img,
+  .intro__img.is-tall {
+    height: 240px;
+  }
+  .intro__img.is-tall {
+    grid-row: span 2;
+    height: calc(480px + 14px);
+  }
+  .intro__col:last-child .intro__img:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .intro__img,
+  .intro__img.is-tall {
+    height: 180px;
+  }
+  .intro__img.is-tall {
+    height: calc(360px + 14px);
+  }
+}
