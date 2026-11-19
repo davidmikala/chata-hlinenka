@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import cabinImg from '../assets/figma/booking-cabin.webp';
+import cabinImg from '../assets/photos/chata-vecer.webp';
 import brush from '../assets/figma/brush-booking.svg';
 import { ScrollCue } from './ui.jsx';
 import './Booking.css';
@@ -182,7 +182,7 @@ export default function Booking() {
           {/* ---------- souhrn ---------- */}
           <aside className="booking__summary">
             <div className="booking__photo">
-              <img src={cabinImg} alt="Chata v zimní krajině" loading="lazy" />
+              <img src={cabinImg} alt="Chata Hliněnka za soumraku" loading="lazy" />
             </div>
             <h3 className="booking__name">Chata Hliněnka</h3>
             <p className="booking__desc">Útulná chata v přírodě pro dokonalý odpočinek i aktivní pobyt.</p>
@@ -198,7 +198,6 @@ export default function Booking() {
             {tab === 'date' ? (
               <button type="button" className="pill-btn" onClick={() => setTab('info')} disabled={nights === 0}>
                 Pokračovat
-                <span aria-hidden="true">→</span>
               </button>
             ) : sent ? (
               <button type="button" className="pill-btn" onClick={() => (setSent(false), setTab('date'))}>
@@ -208,7 +207,6 @@ export default function Booking() {
             ) : (
               <button type="submit" form="booking-form" className="pill-btn">
                 Odeslat poptávku
-                <span aria-hidden="true">→</span>
               </button>
             )}
           </aside>

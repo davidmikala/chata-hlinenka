@@ -4,7 +4,7 @@ import treeBlack from '../assets/figma/tree-black.svg';
 import './ui.css';
 
 /**
- * Tlačítko „REZERVOVAT →“ ve třech variantách z Figmy:
+ * Tlačítko „REZERVOVAT“ ve třech variantách z Figmy:
  *  - light  : bílý rámeček na tmavém pozadí
  *  - dark   : černý rámeček na světlém pozadí
  *  - primary: plné zelené tlačítko
@@ -13,9 +13,6 @@ export function ReserveButton({ variant = 'light', size = 'lg', href = '#rezerva
   return (
     <a href={href} className={`btn btn--${variant} btn--${size} ${className}`}>
       <span className="btn__label">{children}</span>
-      <span className="btn__arrow" aria-hidden="true">
-        →
-      </span>
     </a>
   );
 }

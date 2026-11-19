@@ -10,7 +10,8 @@ const NAV = [
   { href: '#o-chate', label: 'O chatě' },
   { href: '#vybaveni', label: 'Vybavení' },
   { href: '#galerie', label: 'Galerie' },
-  { href: '#aktivity', label: 'Aktivity' },
+  { href: '#vylety', label: 'Výlety' },
+  { href: '#cenik', label: 'Ceník' },
   { href: '#rezervace', label: 'Rezervace' },
 ];
 
@@ -35,23 +36,19 @@ export default function Footer() {
           <div className="footer__col" data-reveal style={{ '--d': '0ms' }}>
             <h3>Kde nás najdete</h3>
             <p className="footer__strong">Chata Hliněnka</p>
-            <p>
-              Hliněnka 12
-              <br />
-              790 01 Jeseník
-            </p>
-            <p>GPS: 50°44'45.7"N; 15°49'23.82"E</p>
+            <p className="footer__strong">Hlinsko pod Hostýnem, ev. č. 10</p>
+            <p>GPS: 49°22'16.0"N; 17°37'18.3"E</p>
             <a href={MAP_URL} target="_blank" rel="noopener noreferrer" className="footer__link footer__link--underline">
               Zobrazit na mapě
             </a>
           </div>
           <div className="footer__col" data-reveal style={{ '--d': '100ms' }}>
             <h3>Kontakt</h3>
-            <a href="tel:+420777123456" className="footer__strong footer__link">
-              +420 777 123 456
+            <a href="tel:+420605270444" className="footer__strong footer__link">
+              +420 605 270 444
             </a>
-            <a href="mailto:info@chatahlinenka.cz" className="footer__strong footer__link">
-              info@chatahlinenka.cz
+            <a href="mailto:david@mikala.cz" className="footer__strong footer__link">
+              david@mikala.cz
             </a>
             <p>Rádi vám poskytneme více informací a pomůžeme s výběrem vhodného termínu.</p>
           </div>
@@ -65,13 +62,13 @@ export default function Footer() {
           </nav>
           <div className="footer__col" data-reveal style={{ '--d': '300ms' }}>
             <h3>Provozovatel</h3>
-            <p className="footer__strong">Mikala David</p>
-            <p>Hliněnka 12, 790 01 Jeseník</p>
-            <a href="mailto:info@mikala.cz" className="footer__link">
-              info@mikala.cz
+            <p className="footer__strong">David Mikala</p>
+            <p className="footer__strong">Hlinsko pod Hostýnem, ev. č. 10</p>
+            <a href="mailto:david@mikala.cz" className="footer__link footer__strong">
+              david@mikala.cz
             </a>
-            <a href="tel:+420777555111" className="footer__link">
-              +420 777 555 111
+            <a href="tel:+420605270444" className="footer__link">
+              +420 605 270 444
             </a>
           </div>
         </div>

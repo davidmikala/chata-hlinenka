@@ -1,0 +1,242 @@
+/* =========================================================
+   Výlety – převzato 1:1 ze stránky „Chata_Hlinenka_8_vyletu“
+   (sekce „Kam na výlet“). Styly jsou scoped pod .kv, aby
+   neovlivnily zbytek webu. Písma, pozadí a nadpisek sekce
+   jsou sladěné s webem v bloku na konci souboru.
+   ========================================================= */
+
+/* reset: zrušení globálních stylů webu uvnitř sekce, ať vypadá přesně jako předloha */
+.kv {
+  font-size: 16px;
+  line-height: normal;
+}
+.kv :is(h1, h2, h3, h4, p) {
+  margin: revert;
+}
+.kv .container {
+  max-width: none;
+  padding-inline: 0;
+}
+.kv .eyebrow {
+  font-family: inherit;
+  line-height: normal;
+}
+.kv button {
+  color: buttontext;
+}
+
+.kv { --cream:#f6f2e9;--paper:#fffdf8;--forest:#25382a;--forest-2:#344934;--text:#29342d;--muted:#697164;--line:#dfddd2;--gold:#b88a58;--sage:#dedfd1;--serif:'Playfair Display',Georgia,serif;--sans:'DM Sans',Arial,sans-serif; }
+  .kv{margin:0;background:var(--cream);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .kv a{color:inherit;text-decoration:none}
+  .kv button{font:inherit}
+  .kv img{display:block;max-width:100%}
+  .kv .container{width:min(1190px,calc(100% - 72px));margin-inline:auto}
+  .kv .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;text-transform:uppercase;letter-spacing:2.15px;font-weight:700;color:#677458}
+  .kv .eyebrow::before{content:"";height:1px;width:34px;background:#a58c61}
+  .kv h1,.kv h2,.kv h3,.kv p{margin-top:0}
+  .kv h1,.kv h2,.kv h3{font-family:var(--serif);font-weight:500;letter-spacing:-.025em}
+  .kv p{line-height:1.95}
+  @media(max-width:780px){.kv .container{width:min(100% - 36px,630px)}}
+
+  /* Schválená úvodní sekce – značka a rezervace na fotografii */
+  /* Rozšířená fotogalerie z vlastních fotografií */
+  
+/* === Kam na výlet / Svatý Hostýn === */
+.kv.hostyn-section{padding:112px 0 120px;background:#faf8f1}
+.kv .hostyn-heading{max-width:750px;margin:0 auto 43px;text-align:center}
+.kv .hostyn-heading h2{font-size:clamp(40px,5vw,69px);line-height:1.1;margin:10px 0 18px;font-family:var(--serif);font-weight:500}
+.kv .hostyn-heading p{font-size:16px;line-height:1.75;color:var(--muted);margin:0 auto;max-width:670px}
+.kv .hostyn-card{display:grid;grid-template-columns:.96fr 1.04fr;background:#fff;box-shadow:0 16px 56px rgba(28,42,30,.065);border:1px solid #e9e6dc;overflow:hidden;min-height:540px}
+.kv .hostyn-image-wrap{position:relative;min-height:540px;overflow:hidden;background:linear-gradient(150deg,#8c9c87 5%,#d3c9aa 54%,#27452f 100%)}
+.kv .hostyn-photo{width:100%;height:100%;min-height:540px;object-fit:cover;object-position:center;position:absolute;inset:0;z-index:1}
+.kv .hostyn-photo-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:25px;gap:10px;color:#fff}
+.kv .hostyn-photo-placeholder:before{content:'⌂';display:block;font-family:Georgia,serif;font-size:140px;color:rgba(255,255,255,.28);line-height:1}
+.kv .hostyn-photo-placeholder span{font-size:13px;letter-spacing:3px;font-weight:700}
+.kv .hostyn-photo-placeholder strong{font-size:28px;font-family:var(--serif)}
+.kv .hostyn-photo-placeholder p{font-size:12px;max-width:220px;line-height:1.7;color:#f7f5ed}
+.kv .hostyn-photo-badge{position:absolute;left:30px;top:30px;z-index:2;background:#fffdf6;padding:14px 21px;font-weight:700;font-size:11px;color:var(--forest);letter-spacing:1.6px;text-transform:uppercase}
+.kv .hostyn-photo-credit{position:absolute;bottom:0;left:0;right:0;z-index:2;padding:15px 28px;font-size:10px;color:white;background:linear-gradient(transparent,rgba(0,0,0,.65));line-height:1.4}
+.kv .hostyn-photo-credit a{text-decoration:underline;text-underline-offset:2px}
+.kv .hostyn-card-content{padding:58px clamp(28px,4vw,64px) 54px}
+.kv .hostyn-card-content h3{font-family:var(--serif);font-size:clamp(45px,4.2vw,67px);font-weight:500;line-height:1.12;margin:12px 0 22px}
+.kv .hostyn-card-content>p:not(.hostyn-question):not(.hostyn-quick-note){line-height:1.82;color:#596457;font-size:16px;margin:0 0 26px}
+.kv .hostyn-highlights{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:29px}
+.kv .hostyn-highlights span{font-size:11px;letter-spacing:.7px;font-weight:700;color:#4d5c4c;padding:9px 12px;border:1px solid #deddd4;background:#f9f9f5;text-transform:uppercase}
+.kv .hostyn-question{font-size:13px;font-weight:700;margin:0 0 12px;letter-spacing:.3px}
+.kv .hostyn-modes{display:flex;flex-wrap:wrap;gap:9px}
+.kv .hostyn-mode{display:inline-flex;gap:9px;align-items:center;border:1px solid #dadccf;background:#f8f8f3;color:#344434;padding:12px 13px;cursor:pointer;font-weight:700;font-size:13px;transition:.2s ease}
+.kv .hostyn-mode svg{width:20px;height:20px;flex:none}
+.kv .hostyn-mode:hover,.kv .hostyn-mode:focus-visible,.kv .hostyn-mode.is-active{background:var(--forest);border-color:var(--forest);color:#fff}
+.kv .hostyn-quick-note{margin:17px 0 20px;font-size:12px;line-height:1.65;color:#7c8178}
+.kv .hostyn-main-map{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:4px;color:var(--forest)}
+.kv .hostyn-main-map svg{width:16px;height:16px}
+.kv .hostyn-expand{margin-top:18px;background:#fff;border:1px solid #e5e3d9;box-shadow:0 13px 40px rgba(31,53,33,.04)}
+.kv .hostyn-expand>summary{padding:25px 32px;list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:15px;color:var(--forest)}
+.kv .hostyn-expand>summary::-webkit-details-marker{display:none}
+.kv .hostyn-expand>summary>span{display:grid;grid-template-columns:26px 1fr;gap:4px 13px;align-items:center}
+.kv .hostyn-expand>summary svg{width:23px;height:23px}
+.kv .hostyn-expand>summary>span strong{font-size:17px;font-weight:700}
+.kv .hostyn-expand>summary>span small{grid-column:2;color:#7b8176;font-size:12px}
+.kv .hostyn-expand>summary>svg{width:21px;height:21px;transition:transform .2s}
+.kv .hostyn-expand[open]>summary>svg{transform:rotate(180deg)}
+.kv .hostyn-expand[open]>summary{border-bottom:1px solid #e7e7dd}
+.kv .hostyn-expand-body{padding:35px clamp(20px,4vw,58px) 50px}
+.kv .hostyn-tabs{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:34px}
+.kv .hostyn-tab{display:inline-flex;gap:10px;align-items:center;padding:13px 21px;background:#f5f5ed;border:1px solid #dddcd1;color:#425344;cursor:pointer;font-weight:700}
+.kv .hostyn-tab svg{height:19px;width:19px}
+.kv .hostyn-tab:hover,.kv .hostyn-tab:focus-visible,.kv .hostyn-tab.is-active{background:var(--forest);border-color:var(--forest);color:white}
+.kv .hostyn-panel[hidden]{display:none!important}
+.kv .hostyn-panel-head h3{font-family:var(--serif);font-size:clamp(26px,2.7vw,39px);font-weight:500;margin:0 0 11px}
+.kv .hostyn-panel-head p{font-size:14px;line-height:1.75;color:var(--muted);margin:0 0 29px;max-width:850px}
+.kv .hostyn-routes{display:grid;gap:15px}
+.kv .hostyn-route-card{display:flex;align-items:flex-start;gap:24px;background:#faf9f3;border:1px solid #e8e7de;padding:23px 25px}
+.kv .hostyn-route-num{font-family:var(--serif);font-size:37px;line-height:1.15;color:#bf9b72;min-width:50px}
+.kv .hostyn-route-main{flex:1;min-width:0}
+.kv .hostyn-route-main h4{font-family:var(--serif);font-size:25px;font-weight:500;margin:0 0 4px}
+.kv .hostyn-route-start{font-size:12px;letter-spacing:.3px;font-weight:700;color:#65735d}
+.kv .hostyn-route-main p{font-size:14px;line-height:1.75;color:#596358;margin:11px 0 7px}
+.kv .hostyn-route-main small{font-size:12px;line-height:1.6;color:#8a8e82;display:block}
+.kv .hostyn-route-links,.kv .hostyn-train-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:19px}
+.kv .hostyn-link{display:inline-flex;align-items:center;gap:9px;justify-content:center;padding:13px 17px;font-size:12px;font-weight:700;background:var(--forest);color:white;transition:background .2s;min-height:46px}
+.kv .hostyn-link svg{height:17px;width:17px;flex:none}
+.kv .hostyn-link svg:last-child{width:15px;height:15px}
+.kv .hostyn-link:hover,.kv .hostyn-link:focus-visible{background:#496348}
+.kv .hostyn-link.is-subtle{color:#374a35;background:white;border:1px solid #cbd1c5}
+.kv .hostyn-link.is-subtle:hover{background:#eef1ea}
+.kv .hostyn-help{color:#8b8e81;font-size:12px;line-height:1.7;margin:23px 0 0}
+.kv .hostyn-train-steps{list-style:none;padding:0;margin:0;counter-reset:hostynstep;display:grid;gap:12px}
+.kv .hostyn-train-steps li{background:#faf9f3;border:1px solid #e8e7de;padding:18px 22px 18px 65px;counter-increment:hostynstep;position:relative}
+.kv .hostyn-train-steps li:before{content:counter(hostynstep);font-size:19px;font-family:var(--serif);color:#c3a17a;position:absolute;left:26px;top:22px}
+.kv .hostyn-train-steps strong{font-size:15px;display:block;margin:0 0 5px}
+.kv .hostyn-train-steps span{color:#646f64;line-height:1.65;font-size:13px}
+@media(max-width:980px){.kv .hostyn-card{grid-template-columns:1fr}.kv .hostyn-image-wrap,.kv .hostyn-photo{min-height:420px}.kv .hostyn-card-content{padding:40px 35px 43px}}
+@media(max-width:610px){.kv.hostyn-section{padding:75px 0 80px}.kv .hostyn-heading{margin-bottom:27px}.kv .hostyn-heading h2{font-size:42px}.kv .hostyn-image-wrap,.kv .hostyn-photo{min-height:290px}.kv .hostyn-card-content{padding:31px 22px 36px}.kv .hostyn-card-content h3{font-size:42px}.kv .hostyn-card-content>p:not(.hostyn-question):not(.hostyn-quick-note){font-size:14px}.kv .hostyn-photo-badge{left:16px;top:17px;padding:10px 13px}.kv .hostyn-photo-credit{font-size:9px;padding:12px 15px}.kv .hostyn-modes{gap:7px}.kv .hostyn-mode{flex:1 1 auto;font-size:11px;padding:10px 9px;gap:5px;justify-content:center}.kv .hostyn-mode svg{width:16px;height:16px}.kv .hostyn-expand>summary{padding:19px 17px}.kv .hostyn-expand>summary>span strong{font-size:14px}.kv .hostyn-expand>summary>span small{font-size:11px}.kv .hostyn-expand-body{padding:23px 15px 30px}.kv .hostyn-tabs{gap:6px}.kv .hostyn-tab{padding:10px 12px;font-size:11px;gap:5px;flex:1}.kv .hostyn-tab svg{width:16px;height:16px}.kv .hostyn-route-card{padding:18px 14px;gap:10px}.kv .hostyn-route-num{font-size:28px;min-width:33px}.kv .hostyn-route-main h4{font-size:22px}.kv .hostyn-route-links,.kv .hostyn-train-actions{flex-direction:column;align-items:stretch}.kv .hostyn-link{width:100%;font-size:11px}.kv .hostyn-panel-head h3{font-size:25px}.kv .hostyn-highlights{gap:5px}.kv .hostyn-highlights span{font-size:9px;padding:8px}}
+
+/* Dalsi vyletni tipy / Kasarov a Holesov */
+.kv .trip-card{min-height:510px}
+.kv .trip-image-wrap{min-height:510px}
+.kv .trip-card .hostyn-photo{min-height:510px}
+.kv .trip-card .hostyn-card-content{padding-top:50px;padding-bottom:43px}
+.kv .trip-card .hostyn-card-content h3{font-size:clamp(39px,4vw,63px)}
+.kv .trip-expand-trigger{background:var(--forest);border:1px solid var(--forest);padding:13px 17px;color:white;display:inline-flex;align-items:center;gap:11px;font-weight:700;cursor:pointer;font-size:13px}
+.kv .trip-expand-trigger svg{width:20px;height:20px;flex:none}
+.kv .trip-expand-trigger svg:last-child{margin-left:8px;width:17px;height:17px}
+.kv .trip-expand-trigger:hover,.kv .trip-expand-trigger:focus-visible{background:#4d654f}
+.kv .trip-expand{margin-bottom:20px}
+.kv .trip-expand .hostyn-route-card{background:#f8f7f2}
+.kv .trip-source{margin-top:18px!important;font-size:12px!important;color:#747d70!important}
+.kv .trip-source a{text-decoration:underline;text-underline-offset:2px;color:var(--forest)}
+.kv .holesov-places{border-top:1px solid #e1e0d5;margin-top:35px;padding-top:30px}
+.kv .holesov-places h4{font-family:var(--serif);font-weight:500;font-size:30px;margin:0 0 17px}
+.kv .holesov-places-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.kv .holesov-places-grid>div{background:#f8f7f1;padding:22px;border:1px solid #ebe9dd}
+.kv .holesov-places-grid b{font-size:13px;color:var(--forest)}
+.kv .holesov-places-grid p{font-size:13px;color:var(--muted);line-height:1.7;margin:10px 0 15px}
+.kv .holesov-places-grid a{font-size:12px;color:var(--forest);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:980px){.kv .trip-card,.kv .trip-image-wrap,.kv .trip-card .hostyn-photo{min-height:0}.kv .trip-image-wrap,.kv .trip-card .hostyn-photo{min-height:360px}}
+@media(max-width:670px){.kv .trip-card .hostyn-card-content h3{font-size:41px}.kv .trip-card .hostyn-photo{min-height:290px}.kv .trip-image-wrap{min-height:290px}.kv .holesov-places-grid{grid-template-columns:1fr}.kv .trip-card .hostyn-card-content{padding:32px 22px 35px}}
+
+/* Výletní rozcestník: 4 karty vedle sebe, po rozkliknutí původní velký detail. */
+.kv .trip-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px;align-items:stretch}
+.kv .trip-overview-card{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;width:100%;height:100%;padding:0;border:1px solid #e2e1d7;background:#fff;color:#293b2f;text-align:left;cursor:pointer;font:inherit;box-shadow:0 8px 30px rgba(23,48,29,.05);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.kv .trip-overview-card:hover,.kv .trip-overview-card:focus-visible{transform:translateY(-5px);box-shadow:0 19px 48px rgba(23,48,29,.14);border-color:#96a391;outline-offset:3px}
+.kv .trip-overview-card[aria-expanded="true"]{border-color:#254532;box-shadow:0 0 0 2px rgba(37,69,50,.1),0 17px 44px rgba(23,48,29,.12)}
+.kv .trip-preview-image{height:208px;width:100%;position:relative;overflow:hidden;display:block;background:linear-gradient(135deg,#405941,#b9b78e);}
+.kv .trip-preview-image>img{position:absolute;inset:0;height:100%;width:100%;object-fit:cover;object-position:center 42%;transition:transform .5s ease;}
+.kv .trip-overview-card:hover .trip-preview-image>img{transform:scale(1.055)}
+.kv .trip-preview-image:after{content:'';pointer-events:none;position:absolute;inset:45% 0 0;background:linear-gradient(transparent,rgba(5,16,9,.75))}
+.kv .trip-preview-image.trip-image-unavailable:before{content:attr(data-fallback);position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-family:var(--serif);font-size:30px}
+.kv .trip-preview-number{position:absolute;z-index:2;left:18px;top:18px;background:#fffdf6;padding:11px 12px;font-size:10px;font-weight:800;letter-spacing:1px;color:#234233}
+.kv .trip-preview-credit{position:absolute;z-index:2;left:16px;right:16px;bottom:12px;color:#fff;font-size:10px;line-height:1.25;text-shadow:0 1px 5px #000}
+.kv .trip-preview-body{display:flex;flex:1;flex-direction:column;gap:0;padding:26px 25px 25px;min-width:0}
+.kv .trip-preview-tag{text-transform:uppercase;letter-spacing:1.6px;font-size:10px;font-weight:750;color:#8b846a}
+.kv .trip-preview-title{display:block;margin:10px 0 12px;font-family:var(--serif);font-weight:500;font-size:clamp(26px,2.15vw,34px);line-height:1.12;color:#233629}
+.kv .trip-preview-description{font-size:13px;line-height:1.65;color:#5b655b;min-height:44px}
+.kv .trip-preview-transport{display:flex;align-items:center;gap:8px;margin-top:15px;font-size:11px;line-height:1.5;color:#5c6e58;font-weight:700}
+.kv .trip-preview-transport svg{width:17px;height:17px;flex:none}
+.kv .trip-preview-action{margin-top:auto;padding-top:23px;display:inline-flex;align-items:center;gap:9px;color:#214331;font-size:12px;font-weight:800;letter-spacing:.15px}
+.kv .trip-overview-card[aria-expanded="true"] .trip-preview-action{color:#9c744d}
+.kv .trip-detail-pane{margin-top:34px;scroll-margin-top:26px;animation:tripReveal .35s ease-out both}
+.kv .trip-detail-pane[hidden]{display:none!important}
+.kv .trip-detail-top{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:16px 18px;background:#e9e9de;border:1px solid #dddcd0;border-bottom:0}
+.kv .trip-detail-top>span{font-size:11px;letter-spacing:1.6px;font-weight:800;color:#536352}
+.kv .trip-detail-top button{display:inline-flex;align-items:center;gap:13px;white-space:nowrap;background:none;border:0;color:#234431;font:inherit;font-size:12px;font-weight:800;cursor:pointer;padding:7px 9px}
+.kv .trip-detail-top button span{font-size:22px;font-weight:400;line-height:1}
+.kv .trip-detail-top button:hover,.kv .trip-detail-top button:focus-visible{color:#a07042;text-decoration:underline}
+.kv .trip-detail-pane>.hostyn-expand{margin-top:18px}
+@keyframes tripReveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:960px){.kv .trip-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.kv .trip-preview-image{height:195px}.kv .trip-preview-body{padding:19px 17px 20px}.kv .trip-preview-title{font-size:clamp(23px,3vw,30px)}.kv .trip-preview-description{font-size:12px}.kv .trip-preview-transport{font-size:10px}}
+@media(max-width:690px){.kv .trip-overview-grid{grid-template-columns:1fr;gap:18px}.kv .trip-preview-image{height:210px}.kv .trip-preview-body{padding:23px}.kv .trip-preview-title{font-size:32px}.kv .trip-preview-description{min-height:0;font-size:14px}.kv .trip-preview-transport{font-size:12px}.kv .trip-detail-pane{margin-top:23px}.kv .trip-detail-top{padding:12px}}
+@media(prefers-reduced-motion:reduce){.kv .trip-detail-pane{animation:none}.kv .trip-overview-card,.kv .trip-preview-image>img{transition:none}}
+
+/* Hliněnka / fixed navigation, pricing and contact — appended without altering original sections. */
+
+/* Přidané tipy 05–08; stejné karty a detaily jako původní výlety */
+.kv .new-trip-origin{border-left:3px solid #c3a980;padding:8px 0 8px 13px;background:#f8f8f3;color:#344434;font-size:13px!important;line-height:1.6!important;margin-bottom:15px!important}
+.kv .new-trip-routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:19px}
+.kv .new-trip-route{background:white;border:1px solid #e3e3d8;padding:25px 24px;box-shadow:0 8px 24px rgba(23,48,29,.04)}
+.kv .new-trip-route h4{font-family:var(--serif);font-weight:500;font-size:25px;line-height:1.2;margin:0 0 13px;color:#203b2a}
+.kv .new-trip-route p{font-size:14px;line-height:1.7;color:#566358;margin:0 0 20px}
+.kv .new-trip-links{display:flex;align-items:start;flex-wrap:wrap;gap:9px}
+.kv .new-trip-button{font-size:12px;text-decoration:none;font-weight:700;color:#fff;background:#1e3b2a;padding:11px 13px;display:inline-flex;align-items:center;gap:9px;line-height:1.35}
+.kv .new-trip-button:hover,.kv .new-trip-button:focus-visible{background:#325841;color:white}
+.kv .new-trip-button.is-quiet{color:#2b4935;background:#f0f1e8;border:1px solid #d6ddcf}
+.kv .new-trip-button.is-quiet:hover,.kv .new-trip-button.is-quiet:focus-visible{background:#e4e9db;color:#1e3b2a}
+.kv .new-trip-callout{background:#f4f4ed;border:1px solid #dfe0d4;padding:17px 20px;margin-top:23px;font-size:14px;line-height:1.65;color:#445343}
+.kv .new-trip-callout strong{display:block;color:#1e3b2a;font-size:15px;margin-bottom:5px}
+.kv .new-trip-callout p{margin:0 0 12px;color:#5b675b}
+.kv .new-trip-callout a{color:#1e3b2a;font-weight:800}
+.kv .new-detail-card .hostyn-card-content{display:block}
+.kv .new-detail-card .hostyn-photo-credit{background:rgba(12,28,17,.78);color:#fff}
+@media(max-width:560px){.kv .new-trip-routes{grid-template-columns:1fr}.kv .new-trip-route{padding:21px 18px}.kv .new-trip-route h4{font-size:23px}.kv .new-trip-button{width:100%;justify-content:space-between}}
+
+/* =========================================================
+   Napojení na vzhled webu – písma, pozadí a nadpisek sekce
+   (přepisuje hodnoty předlohy výše)
+   ========================================================= */
+.kv {
+  --serif: var(--font-serif);
+  --sans: var(--font-sans);
+}
+.kv.hostyn-section {
+  background: var(--white);
+}
+.kv h1,
+.kv h2,
+.kv h3,
+.kv h4 {
+  letter-spacing: 0;
+}
+/* nadpisek „Objevujte Hostýnské vrchy“ stejně jako ostatní sekce (.eyebrow) */
+.kv .eyebrow {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: #c4a585; /* globální --gold (uvnitř .kv je --gold přepsané) */
+}
+.kv .eyebrow::before {
+  content: none;
+}
+.kv .hostyn-heading h2 {
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  line-height: 1.1;
+}
+.kv .trip-preview-title {
+  font-weight: 400;
+  font-size: clamp(22px, 1.7vw, 27px);
+  line-height: 1.2;
+}
+.kv .hostyn-card-content h3 {
+  font-weight: 400;
+  font-size: clamp(32px, 3.2vw, 48px);
+}
+@media (max-width: 600px) {
+  .kv .eyebrow {
+    letter-spacing: 4px;
+  }
+}

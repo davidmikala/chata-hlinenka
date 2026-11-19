@@ -1,11 +1,15 @@
 import barnImg from '../assets/figma/barn.webp';
+import tableImg from '../assets/photos/stodola-stul.webp';
+import kitchenImg from '../assets/photos/stodola-kuchynka.webp';
+import dartsImg from '../assets/photos/stodola-sipky.webp';
 import { SectionHead, ReserveButton, ScrollCue } from './ui.jsx';
 import './Barn.css';
 
-const SEASONS = [
-  { title: 'Léto', text: 'Letní večerní grilování s rodinou a přáteli.' },
-  { title: 'Podzim', text: 'Posezení u ohně, když venku prší a ochladí se.' },
-  { title: 'Zima', text: 'Setkání s přáteli v teple krbových kamen, i když venku sněží.' },
+// pohled dovnitř stodoly
+const INSIDE = [
+  { src: tableImg, alt: 'Velký dřevěný stůl ve stodole', title: 'Stůl pro celou partu' },
+  { src: kitchenImg, alt: 'Kuchyňka s vinotékou a krbovými kamny ve stodole', title: 'Kuchyňka a krbová kamna' },
+  { src: dartsImg, alt: 'Šipkový terč s osvětlením na stěně stodoly', title: 'Šipky na dlouhé večery' },
 ];
 
 export default function Barn() {
@@ -25,14 +29,16 @@ export default function Barn() {
           rodinou či přáteli. Díky vytápění krbovými kamny si zde užijete teplo a atmosféru praskajícího dřeva, i když za okny prší, sněží nebo mrzne.
         </p>
 
-        <div className="barn__seasons">
-          {SEASONS.map((s, i) => (
-            <article className="outline-card" key={s.title} data-reveal style={{ '--d': `${i * 120}ms` }}>
-              <h3 className="h3">{s.title}</h3>
-              <p>{s.text}</p>
-            </article>
+        <ul className="barn__inside">
+          {INSIDE.map((p, i) => (
+            <li key={p.title} data-reveal style={{ '--d': `${i * 120}ms` }}>
+              <figure className="barn__tile">
+                <img src={p.src} alt={p.alt} loading="lazy" />
+                <figcaption>{p.title}</figcaption>
+              </figure>
+            </li>
           ))}
-        </div>
+        </ul>
 
         <p className="quote barn__claim" data-reveal>
           U nás totiž grilovací sezóna nikdy nekončí.

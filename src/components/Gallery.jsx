@@ -1,32 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import g1 from '../assets/figma/gallery-1.webp';
-import g2 from '../assets/figma/gallery-2.webp';
-import g3 from '../assets/figma/gallery-3.webp';
-import g4 from '../assets/figma/gallery-4.webp';
-import g5 from '../assets/figma/gallery-5.webp';
-import g6 from '../assets/figma/gallery-6.webp';
-import g7 from '../assets/figma/gallery-7.webp';
-import g8 from '../assets/figma/gallery-8.webp';
-import g9 from '../assets/figma/gallery-9.webp';
-import g10 from '../assets/figma/gallery-10.webp';
-import g11 from '../assets/figma/gallery-11.webp';
-import g12 from '../assets/figma/gallery-12.webp';
+import g1 from '../assets/photos/loznice-modra.webp';
+import g2 from '../assets/photos/kuchyne.webp';
+import g3 from '../assets/photos/sprcha.webp';
+import g4 from '../assets/photos/obyvak-sedacka.webp';
+import g5 from '../assets/photos/chata-podzim.webp';
+import g6 from '../assets/photos/loznice-kvetiny.webp';
+import g7 from '../assets/photos/koupelna-umyvadlo.webp';
+import g8 from '../assets/photos/kuchyne-detail.webp';
+import g9 from '../assets/photos/terasa-vecer.webp';
+import g10 from '../assets/photos/stodola-terce.webp';
+import g11 from '../assets/photos/obyvak-kamna.webp';
+import g12 from '../assets/photos/chata-terasa.webp';
+import g13 from '../assets/photos/loznice-listy.webp';
+import g14 from '../assets/photos/stodola-bar.webp';
+import g15 from '../assets/photos/loznice-okno.webp';
+import g16 from '../assets/photos/brizy-detail.webp';
+import g17 from '../assets/photos/chata-zadni.webp';
 import { SectionHead, ReserveButton, ScrollCue, ArrowButton } from './ui.jsx';
 import './Gallery.css';
 
 const IMAGES = [
-  { src: g1, alt: 'Interiér s velkým oknem do lesa', w: 250 },
-  { src: g2, alt: 'Ložnice s dřevěným obložením', w: 250 },
-  { src: g3, alt: 'Domek na kůlech uprostřed lesa', w: 250 },
-  { src: g4, alt: 'Dřevěný dům mezi břízami', w: 560 },
-  { src: g5, alt: 'Krajina kolem chaty z dronu', w: 560 },
-  { src: g6, alt: 'Posezení u okna s výhledem', w: 250 },
-  { src: g7, alt: 'Obývací kout s výhledem do krajiny', w: 250 },
-  { src: g8, alt: 'Koupelna s volně stojící vanou', w: 250 },
-  { src: g9, alt: 'Večer u krbu s přáteli', w: 263 },
-  { src: g10, alt: 'Kuchyně v podkroví', w: 263 },
-  { src: g11, alt: 'Dřevěný domek u vody', w: 567 },
-  { src: g12, alt: 'Moderní dřevěná architektura', w: 567 },
+  { src: g1, alt: 'Ložnice s tmavě modrou stěnou a dřevěnou postelí', w: 250 },
+  { src: g2, alt: 'Kuchyně se zelenými skříňkami', w: 250 },
+  { src: g3, alt: 'Sprchový kout v koupelně s dřevěným obkladem', w: 250 },
+  { src: g4, alt: 'Obývací pokoj se sedačkou, březovými kmeny a jídelnou', w: 560 },
+  { src: g5, alt: 'Chata Hliněnka a stodola v podzimní zahradě', w: 560 },
+  { src: g6, alt: 'Ložnice s květinovým povlečením', w: 250 },
+  { src: g7, alt: 'Koupelna s kulatým podsvíceným zrcadlem', w: 250 },
+  { src: g8, alt: 'Varná konvice a topinkovač v retro stylu', w: 250 },
+  { src: g9, alt: 'Krytá terasa s lavicemi za večerního osvětlení', w: 263 },
+  { src: g10, alt: 'Podsvícený šipkový terč ve stodole', w: 263 },
+  { src: g11, alt: 'Obývací pokoj s krbovými kamny a zelenou sedačkou', w: 567 },
+  { src: g12, alt: 'Chata s dřevěnou terasou mezi stromy', w: 567 },
+  { src: g13, alt: 'Ložnice s povlečením s motivem listů', w: 263 },
+  { src: g14, alt: 'Kuchyňka ve stodole s cihlovou stěnou', w: 263 },
+  { src: g15, alt: 'Ložnice s posezením u okna', w: 567 },
+  { src: g16, alt: 'Březové kmeny u vstupu do kuchyně', w: 263 },
+  { src: g17, alt: 'Chata Hliněnka při západu slunce', w: 567 },
 ];
 
 const ROW1 = IMAGES.slice(0, 4);

@@ -9,7 +9,8 @@ import Location from './components/Location.jsx';
 import Barn from './components/Barn.jsx';
 import Gallery from './components/Gallery.jsx';
 import Equipment from './components/Equipment.jsx';
-import Activities from './components/Activities.jsx';
+import Trips from './components/Trips.jsx';
+import Pricing from './components/Pricing.jsx';
 import Booking from './components/Booking.jsx';
 import Reviews from './components/Reviews.jsx';
 import MapSection from './components/MapSection.jsx';
@@ -33,7 +34,8 @@ export default function App() {
         <Barn />
         <Gallery />
         <Equipment />
-        <Activities />
+        <Trips />
+        <Pricing />
         <Booking />
         <Reviews />
         <MapSection />

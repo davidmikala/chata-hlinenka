@@ -1,0 +1,241 @@
+/* =========================================================
+   Ceník
+   ========================================================= */
+.pricing {
+  background: var(--white);
+  padding: var(--section-y) 0;
+}
+
+.pricing__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+
+.pricing__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+/* ---------- karta období ---------- */
+.price-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-extra-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 30px 60px -45px rgba(8, 39, 29, 0.45);
+  transition:
+    transform 0.6s var(--ease-out),
+    box-shadow 0.6s var(--ease-out);
+}
+
+.price-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 40px 70px -40px rgba(8, 39, 29, 0.5);
+}
+
+.price-card__media {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.price-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.4s var(--ease-out);
+}
+
+.price-card:hover .price-card__media img {
+  transform: scale(1.06);
+}
+
+.price-card__period {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 39, 29, 0.82);
+  backdrop-filter: blur(4px);
+  color: var(--bg-extra-light);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.price-card__body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 30px 30px 32px;
+}
+
+.price-card__num {
+  position: absolute;
+  top: 32px;
+  right: 30px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--brown);
+}
+
+.price-card__body .h3 {
+  padding-right: 36px;
+}
+
+.price-card__text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.price-card__list {
+  display: flex;
+  flex-direction: column;
+  margin: auto 0 0;
+  border-top: 1px solid var(--bg-light);
+}
+
+.price-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bg-light);
+}
+
+.price-line dt {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.price-line dd {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  white-space: nowrap;
+  color: var(--green-dark);
+}
+
+.price-line dd.is-request {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brown-dark);
+}
+
+.price-card__hint {
+  font-size: 13px;
+  color: var(--grey-system);
+  padding-top: 4px;
+}
+
+/* ---------- doplňkové informace ---------- */
+.pricing__extras {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 28px 40px;
+  width: 100%;
+  padding: 28px 32px;
+  border: 1px solid rgba(162, 132, 94, 0.45);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 249, 0.55);
+}
+
+.pricing__extra {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 260px;
+}
+
+.pricing__extra strong,
+.pricing__extra span:not(.pricing__icon) {
+  display: block;
+}
+
+.pricing__extra strong {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.pricing__extra div > span {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.pricing__extra b {
+  color: var(--black);
+}
+
+.pricing__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--brown);
+  border-radius: 50%;
+  color: var(--brown-dark);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.pricing__ask {
+  flex: none;
+  margin-left: auto;
+}
+
+@media (max-width: 1000px) {
+  .pricing__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .price-card:last-child {
+    grid-column: 1 / -1;
+  }
+  .price-card:last-child .price-card__media {
+    aspect-ratio: 21 / 9;
+  }
+}
+
+@media (max-width: 680px) {
+  .pricing__inner {
+    gap: 40px;
+  }
+  .pricing__grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .price-card:last-child .price-card__media {
+    aspect-ratio: 16 / 10;
+  }
+  .price-card__body {
+    padding: 24px 22px 26px;
+  }
+  .price-card__num {
+    top: 26px;
+    right: 22px;
+  }
+  .pricing__extras {
+    padding: 22px 20px;
+  }
+  .pricing__ask {
+    width: 100%;
+    margin-left: 0;
+  }
+}

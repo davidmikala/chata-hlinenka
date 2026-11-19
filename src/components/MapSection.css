@@ -1,47 +1,278 @@
-.map-section {
+/* =========================================================
+   Kontakt – „Těšíme se na vás“ (mapa vlevo, text vpravo)
+   ========================================================= */
+.contact {
   background: var(--bg-extra-light);
-  padding: 86px 0 88px;
+  padding: 96px 0 100px;
 }
 
-.map-section__inner {
+.contact__inner {
   display: grid;
-  grid-template-columns: 1fr 508px;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   align-items: center;
-  gap: 40px;
-  max-width: calc(1205px + 2 * var(--gutter));
+  gap: clamp(48px, 7vw, 110px);
 }
 
-.map-section__text {
+.contact__map {
+  position: relative;
+  align-self: stretch;
+  min-height: 460px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 30px 60px -36px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- interaktivní mapa ---------- */
+.contact-map {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  background: var(--bg-light);
+}
+
+.contact-map__canvas {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-sans);
+  background: var(--bg-light);
+}
+
+/* dlaždice jemně dobarvené do teplých tónů webu */
+.contact-map .leaflet-tile-pane {
+  filter: saturate(0.7) sepia(0.12) contrast(0.98);
+}
+
+/* špendlík chaty */
+.map-pin {
+  background: none;
+  border: 0;
+}
+
+.map-pin__dot {
+  position: absolute;
+  z-index: 1;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green-dark);
+  color: var(--bg-extra-light);
+  border: 3px solid var(--bg-extra-light);
+  box-shadow: 0 10px 22px -8px rgba(8, 39, 29, 0.8);
+  transition: transform 0.3s var(--ease-out);
+}
+
+.map-pin:hover .map-pin__dot {
+  transform: scale(1.08);
+}
+
+.map-pin__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(196, 165, 133, 0.55);
+  animation: map-pulse 2.4s var(--ease-out) infinite;
+}
+
+@keyframes map-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* popup s adresou */
+.map-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  background: var(--bg-extra-light);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.45);
+}
+
+.map-popup .leaflet-popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 14px 18px 15px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.map-popup .leaflet-popup-content strong {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--black);
+}
+
+.map-popup .leaflet-popup-content a {
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.map-popup .leaflet-popup-tip {
+  background: var(--bg-extra-light);
+}
+
+/* tlačítka přiblížení */
+.contact-map .leaflet-bar {
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.45);
+}
+
+.contact-map .leaflet-bar a {
+  width: 38px;
+  height: 38px;
+  line-height: 38px;
+  font-size: 20px;
+  color: var(--green-dark);
+  background: var(--bg-extra-light);
+}
+
+.contact-map .leaflet-bar a:hover {
+  background: var(--bg-light);
+}
+
+.contact-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 253, 249, 0.8);
+}
+
+/* „Zpět na chatu“ */
+.contact-map__recenter {
+  position: absolute;
+  z-index: 500;
+  top: 16px;
+  left: 16px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-extra-light);
+  color: var(--green-dark);
+  font: 700 11px/1 var(--font-sans);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.3s;
+}
+
+.contact-map__recenter:hover {
+  background: var(--bg-light);
+}
+
+/* nápověda, dokud mapa není aktivní */
+.contact-map__hint {
+  position: absolute;
+  z-index: 500;
+  left: 50%;
+  bottom: 18px;
+  translate: -50% 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 39, 29, 0.82);
+  color: var(--bg-extra-light);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.contact-map.is-active .contact-map__hint {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin__pulse {
+    animation: none;
+  }
+}
+
+.contact__body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 29px;
-  max-width: 447px;
-  margin-inline: auto;
-  width: 100%;
+  gap: 28px;
 }
 
-.map-section__titles {
+.contact__titles {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.map-section__line {
-  display: block;
-  width: 276px;
-  max-width: 100%;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.map-section__address {
-  font-style: normal;
+.contact__text {
+  max-width: 480px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--text-muted);
 }
 
+.contact__lines {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 36px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0;
+  padding: 26px 0;
+  border-block: 1px solid var(--bg-light);
+}
+
+.contact__lines div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contact__lines dt {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.contact__lines dd {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--black);
+}
+
+.contact__lines address {
+  font-style: normal;
+}
+
+.contact__lines a {
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition:
+    background-size 0.4s var(--ease-out),
+    color 0.3s;
+}
+
+.contact__lines a:hover {
+  color: var(--brown-dark);
+  background-size: 100% 1px;
+}
+
+.contact__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px 28px;
+}
+
+/* podtržený odkaz (používá se i jinde) */
 .link {
   position: relative;
   font-size: 15px;
@@ -56,113 +287,29 @@
   color: var(--brown-dark);
 }
 
-.map-section__map {
-  position: relative;
-  display: block;
-  height: 395px;
-}
-
-.map-section__frame {
-  position: relative;
-  display: block;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 8px;
-  box-shadow: 0 30px 60px -36px rgba(0, 0, 0, 0.45);
-}
-
-.map-section__frame img {
-  width: 100%;
-  height: 114%;
-  margin-top: -3.5%;
-  object-fit: cover;
-  transition: transform 1.2s var(--ease-out);
-}
-
-.map-section__map:hover .map-section__frame img {
-  transform: scale(1.06);
-}
-
-/* pulzující špendlík uprostřed mapy */
-.map-section__pin {
-  position: absolute;
-  top: 37%;
-  left: 35%;
-  width: 18px;
-  height: 18px;
-  background: var(--brown-dark);
-  border: 3px solid var(--white);
-  border-radius: 50%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-}
-
-.map-section__pin::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 2px solid var(--brown-dark);
-  animation: pin-pulse 2s var(--ease-out) infinite;
-}
-
-@keyframes pin-pulse {
-  to {
-    transform: scale(3.2);
-    opacity: 0;
+@media (max-width: 900px) {
+  .contact {
+    padding: 72px 0 80px;
   }
-}
-
-.map-section__cta {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--white);
-  background: rgba(8, 39, 29, 0.9);
-  border-radius: 100px;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translate(-50%, 12px);
-  transition:
-    opacity 0.4s var(--ease-out),
-    transform 0.4s var(--ease-out);
-}
-
-.map-section__map:hover .map-section__cta,
-.map-section__map:focus-visible .map-section__cta {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-@media (max-width: 960px) {
-  .map-section {
-    padding: 72px 0;
-  }
-  .map-section__inner {
+  .contact__inner {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 40px;
   }
-  .map-section__text {
-    margin: 0;
-    max-width: none;
-  }
-  .map-section__map {
-    height: min(420px, 90vw);
-  }
-  .map-section__cta {
-    opacity: 1;
-    transform: translate(-50%, 0);
+  .contact__map {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
   }
 }
 
-@media (max-width: 960px) {
-  .map-section__text {
-    align-items: center;
-    text-align: center;
+@media (max-width: 480px) {
+  .contact__map {
+    aspect-ratio: 1 / 1;
   }
-  .map-section__titles {
-    align-items: center;
+  .contact__lines {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .contact__lines dd {
+    font-size: 17px;
   }
 }

@@ -1,25 +1,25 @@
-import i1 from '../assets/figma/intro-1.webp';
-import i2 from '../assets/figma/intro-2.webp';
-import i3 from '../assets/figma/intro-3.webp';
-import i4 from '../assets/figma/intro-4.webp';
-import i5 from '../assets/figma/intro-5.webp';
-import i6 from '../assets/figma/intro-6.webp';
+import i1 from '../assets/photos/obyvak-brizy.webp';
+import i2 from '../assets/photos/chata-zahrada.webp';
+import i3 from '../assets/photos/chata-svah.webp';
+import i4 from '../assets/photos/jidelna-stul.webp';
+import i5 from '../assets/photos/koupelna-vana.webp';
+import i6 from '../assets/photos/obyvak-krb.webp';
 import brush from '../assets/figma/brush-intro.svg';
 import { SectionHead } from './ui.jsx';
 import './Intro.css';
 
 const COLUMNS = [
   [
-    { src: i1, alt: 'Dřevěná chata v zasněženém lese', tall: true },
-    { src: i2, alt: 'Chata u zamrzlého jezera pod horami' },
+    { src: i1, alt: 'Obývací pokoj s březovými kmeny a zelenou sedačkou', tall: true },
+    { src: i2, alt: 'Chata Hliněnka se zahradou a přístřeškem' },
   ],
   [
-    { src: i3, alt: 'Dřevěný A-frame v lese' },
-    { src: i4, alt: 'Chata v podzimních barvách', tall: true },
+    { src: i3, alt: 'Chata na svahu v podzimních barvách' },
+    { src: i4, alt: 'Jídelní stůl s ovocem a tulipány', tall: true },
   ],
   [
-    { src: i5, alt: 'Útulný interiér s krbem', tall: true },
-    { src: i6, alt: 'Chata na zelené louce' },
+    { src: i5, alt: 'Koupelna s černou volně stojící vanou', tall: true },
+    { src: i6, alt: 'Obývací pokoj s krbovými kamny' },
   ],
 ];
 

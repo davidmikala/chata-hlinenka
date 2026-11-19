@@ -1,23 +1,23 @@
 import bed from '../assets/figma/eq-bed.png';
-import sauna from '../assets/figma/eq-sauna.png';
-import wifi from '../assets/figma/eq-wifi.png';
+import tub from '../assets/figma/eq-koupaci-sud.svg';
+import barn from '../assets/figma/eq-stodola.svg';
+import wifi from '../assets/figma/eq-wifi.svg';
 import grill from '../assets/figma/eq-grill.png';
 import balcony from '../assets/figma/eq-balcony.png';
 import snowflake from '../assets/figma/eq-snowflake.png';
-import bicycle from '../assets/figma/eq-bicycle.png';
 import parking from '../assets/figma/eq-parking.png';
 import playground from '../assets/figma/eq-playground.png';
 import { SectionHead } from './ui.jsx';
 import './Equipment.css';
 
 const ITEMS = [
-  { icon: bed, title: '4 ložnice', text: 'Komfortní ubytování pro 12 osob s dostatkem soukromí' },
-  { icon: sauna, title: 'Sauna', text: 'Ideální místo pro relaxaci po dni stráveném v přírodě' },
-  { icon: wifi, title: 'Wi-fi', text: 'Stabilní připojení pro práci i zábavu' },
+  { icon: bed, title: '4 ložnice', text: 'Komfortní ubytování pro 8 osob + 3 přistýlky' },
+  { icon: tub, title: 'Koupací sud', text: 'Ideální místo pro relaxaci po dni stráveném v přírodě' },
+  { icon: barn, title: 'Stodola', text: 'Útulné místo pro společné chvíle za každého počasí' },
   { icon: grill, title: 'Gril', text: 'Venkovní gril pro společné večery s rodinou a přáteli' },
   { icon: balcony, title: 'Terasa', text: 'Příjemné posezení s výhledem do okolní přírody' },
   { icon: snowflake, title: 'Klimatizace', text: 'Pohodlí i během horkých letních dnů' },
-  { icon: bicycle, title: 'Úschovna kol', text: 'Bezpečný prostor pro uložení kol a sportovního vybavení' },
+  { icon: wifi, title: 'Wi-fi', text: 'Stabilní připojení pro práci i zábavu' },
   { icon: parking, title: 'Parkování', text: 'Parkování přímo u chaty až pro 5 vozidel' },
   { icon: playground, title: 'Hřiště', text: 'Zábava pro děti přímo u objektu' },
 ];

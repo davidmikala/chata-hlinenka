@@ -6,13 +6,14 @@ import './Header.css';
 const LEFT = [
   { href: '#o-chate', label: 'O chatě' },
   { href: '#vybaveni', label: 'Vybavení' },
-  { href: '#galerie', label: 'Galerie' },
+  { href: '#vylety', label: 'Výlety' },
 ];
 const RIGHT = [
-  { href: '#aktivity', label: 'Aktivity' },
+  { href: '#cenik', label: 'Ceník' },
   { href: '#kontakt', label: 'Kontakt' },
 ];
-const ALL = [...LEFT, ...RIGHT, { href: '#rezervace', label: 'Rezervace' }];
+// mobilní menu má navíc galerii a rezervaci
+const ALL = [LEFT[0], LEFT[1], { href: '#galerie', label: 'Galerie' }, LEFT[2], ...RIGHT, { href: '#rezervace', label: 'Rezervace' }];
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -30,7 +31,7 @@ export default function Header() {
   // zvýraznění aktivní položky menu podle sekce ve viewportu
   useEffect(() => {
     // sekce, které nemají vlastní položku v menu, patří pod „O chatě“
-    const ALIAS = { pribeh: 'o-chate', 'proc-hlinenka': 'o-chate', poloha: 'o-chate', stodola: 'o-chate' };
+    const ALIAS = { pribeh: 'o-chate', 'proc-hlinenka': 'o-chate', poloha: 'o-chate', stodola: 'o-chate', recenze: 'rezervace' };
     const navIds = new Set(ALL.map((l) => l.href.slice(1)));
     const sections = [...document.querySelectorAll('main > section[id]')];
     let raf = 0;
@@ -128,11 +129,11 @@ export default function Header() {
           </ul>
         </nav>
         <div className="mobile-menu__footer" style={{ '--i': ALL.length }}>
-          <a href="tel:+420777123456" tabIndex={open ? 0 : -1}>
-            +420 777 123 456
+          <a href="tel:+420605270444" tabIndex={open ? 0 : -1}>
+            +420 605 270 444
           </a>
-          <a href="mailto:info@chatahlinenka.cz" tabIndex={open ? 0 : -1}>
-            info@chatahlinenka.cz
+          <a href="mailto:david@mikala.cz" tabIndex={open ? 0 : -1}>
+            david@mikala.cz
           </a>
         </div>
     </div>
