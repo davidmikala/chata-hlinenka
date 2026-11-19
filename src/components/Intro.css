@@ -81,25 +81,24 @@
   .intro__col {
     display: contents;
   }
+  /* střídání: fotka na šířku přes celý řádek, pak dvojice fotek na výšku */
   .intro__img,
   .intro__img.is-tall {
-    height: 240px;
+    order: var(--m);
+    height: auto;
+    aspect-ratio: 3 / 4;
   }
-  .intro__img.is-tall {
-    grid-row: span 2;
-    height: calc(480px + 14px);
-  }
-  .intro__col:last-child .intro__img:last-child {
+  .intro__img.is-wide {
     grid-column: 1 / -1;
+    aspect-ratio: 16 / 10;
+  }
+  .intro__img img {
+    object-position: var(--pos, 50% 50%);
   }
 }
 
 @media (max-width: 520px) {
-  .intro__img,
-  .intro__img.is-tall {
-    height: 180px;
-  }
-  .intro__img.is-tall {
-    height: calc(360px + 14px);
+  .intro__grid {
+    gap: 10px;
   }
 }

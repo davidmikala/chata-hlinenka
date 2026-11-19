@@ -8,18 +8,19 @@ import brush from '../assets/figma/brush-intro.svg';
 import { SectionHead } from './ui.jsx';
 import './Intro.css';
 
+// m = pořadí na mobilu, wide = na mobilu přes celou šířku (fotky na šířku)
 const COLUMNS = [
   [
-    { src: i1, alt: 'Obývací pokoj s březovými kmeny a zelenou sedačkou', tall: true },
-    { src: i2, alt: 'Chata Hliněnka se zahradou a přístřeškem' },
+    { src: i1, alt: 'Obývací pokoj s březovými kmeny a zelenou sedačkou', tall: true, m: 2 },
+    { src: i2, alt: 'Chata Hliněnka se zahradou a přístřeškem', m: 1, wide: true },
   ],
   [
-    { src: i3, alt: 'Chata na svahu v podzimních barvách' },
-    { src: i4, alt: 'Jídelní stůl s ovocem a tulipány', tall: true },
+    { src: i3, alt: 'Chata na svahu v podzimních barvách', m: 4, wide: true },
+    { src: i4, alt: 'Jídelní stůl s ovocem a tulipány', tall: true, m: 3 },
   ],
   [
-    { src: i5, alt: 'Koupelna s černou volně stojící vanou', tall: true },
-    { src: i6, alt: 'Obývací pokoj s krbovými kamny' },
+    { src: i5, alt: 'Koupelna s černou volně stojící vanou', tall: true, m: 5 },
+    { src: i6, alt: 'Obývací pokoj s krbovými kamny', m: 6, pos: '22% 50%' },
   ],
 ];
 
@@ -43,9 +44,9 @@ export default function Intro() {
               {col.map((img, r) => (
                 <figure
                   key={img.alt}
-                  className={`intro__img ${img.tall ? 'is-tall' : ''}`}
+                  className={`intro__img ${img.tall ? 'is-tall' : ''} ${img.wide ? 'is-wide' : ''}`}
                   data-reveal="clip"
-                  style={{ '--d': `${c * 120 + r * 180}ms` }}
+                  style={{ '--d': `${c * 120 + r * 180}ms`, '--m': img.m, '--pos': img.pos }}
                 >
                   <img src={img.src} alt={img.alt} loading="lazy" />
                 </figure>
