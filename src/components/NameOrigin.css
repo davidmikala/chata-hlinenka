@@ -136,16 +136,6 @@
   box-shadow: 0 24px 50px -30px rgba(0, 0, 0, 0.45);
 }
 
-.origin__caption {
-  position: absolute;
-  right: 0;
-  bottom: 22px;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 15px;
-  color: var(--brown-dark);
-}
-
 /* ---------- responzivita ---------- */
 @media (max-width: 1100px) {
   .origin__inner {
@@ -179,9 +169,5 @@
   .origin__item {
     grid-template-columns: 44px minmax(0, 1fr);
     padding: 22px 0;
-  }
-  .origin__caption {
-    bottom: 12px;
-    font-size: 13px;
   }
 }

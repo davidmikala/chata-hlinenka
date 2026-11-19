@@ -1,4 +1,4 @@
-import barnImg from '../assets/figma/barn.webp';
+import barnImg from '../assets/photos/stodola-interier.webp';
 import tableImg from '../assets/photos/stodola-stul.webp';
 import kitchenImg from '../assets/photos/stodola-kuchynka.webp';
 import dartsImg from '../assets/photos/stodola-sipky.webp';
@@ -9,7 +9,7 @@ import './Barn.css';
 const INSIDE = [
   { src: tableImg, alt: 'Velký dřevěný stůl ve stodole', title: 'Stůl pro celou partu' },
   { src: kitchenImg, alt: 'Kuchyňka s vinotékou a krbovými kamny ve stodole', title: 'Kuchyňka a krbová kamna' },
-  { src: dartsImg, alt: 'Šipkový terč s osvětlením na stěně stodoly', title: 'Šipky na dlouhé večery' },
+  { src: dartsImg, alt: 'Osvětlený šipkový terč s cedulí Darts Zone na dřevěné stěně stodoly', title: 'Šipky na dlouhé večery' },
 ];
 
 export default function Barn() {
@@ -21,7 +21,7 @@ export default function Barn() {
         </SectionHead>
 
         <figure className="barn__photo" data-reveal="zoom">
-          <img src={barnImg} alt="Stodola s dřevěnou terasou a venkovním posezením" loading="lazy" />
+          <img src={barnImg} alt="Interiér stodoly s dlouhými dubovými stoly, krbovými kamny a kuchyňkou" loading="lazy" />
         </figure>
 
         <p className="barn__text" data-reveal>

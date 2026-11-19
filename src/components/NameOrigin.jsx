@@ -70,9 +70,6 @@ export default function NameOrigin() {
           <figure className="origin__photo origin__photo--small" data-reveal style={{ '--d': '200ms' }}>
             <img src={placeImg} alt="Chata Hliněnka v krajině pod Hostýnskými vrchy" loading="lazy" />
           </figure>
-          <p className="origin__caption" data-reveal style={{ '--d': '300ms' }}>
-            Hlinsko + hlína
-          </p>
         </div>
       </div>
     </section>
