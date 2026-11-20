@@ -295,15 +295,18 @@
     grid-template-columns: 1fr;
     gap: 40px;
   }
+  /* pevná výška místo aspect-ratio – v mřížce s align-self: stretch ji
+     Safari na iPhonu počítá jako 0 a mapa se vůbec nezobrazí */
   .contact__map {
+    align-self: auto;
     min-height: 0;
-    aspect-ratio: 4 / 3;
+    height: 420px;
   }
 }
 
 @media (max-width: 480px) {
   .contact__map {
-    aspect-ratio: 1 / 1;
+    height: 340px;
   }
   .contact__lines {
     grid-template-columns: 1fr;

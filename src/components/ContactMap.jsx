@@ -71,11 +71,19 @@ export default function ContactMap() {
     m.on('popupopen', enable);
 
     // mapa se vykresluje uvnitř animovaného bloku – po změně velikosti přepočítat
-    const ro = new ResizeObserver(() => m.invalidateSize());
-    ro.observe(el.current);
+    // (a pro jistotu i po načtení stránky / otočení telefonu)
+    const refresh = () => m.invalidateSize();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refresh) : null;
+    ro?.observe(el.current);
+    const timer = setTimeout(refresh, 400);
+    window.addEventListener('load', refresh);
+    window.addEventListener('orientationchange', refresh);
 
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
+      clearTimeout(timer);
+      window.removeEventListener('load', refresh);
+      window.removeEventListener('orientationchange', refresh);
       m.remove();
       map.current = null;
       marker.current = null;
