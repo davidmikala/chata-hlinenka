@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import cabinImg from '../assets/photos/chata-vecer.webp';
+import { Photo } from '../content/photos.jsx';
 import brush from '../assets/figma/brush-booking.svg';
 import { ScrollCue } from './ui.jsx';
 import './Booking.css';
@@ -182,7 +182,7 @@ export default function Booking() {
           {/* ---------- souhrn ---------- */}
           <aside className="booking__summary">
             <div className="booking__photo">
-              <img src={cabinImg} alt="Chata Hliněnka za soumraku" loading="lazy" />
+              <Photo slot="booking" loading="lazy" sizes="(max-width: 900px) 100vw, 360px" />
             </div>
             <h3 className="booking__name">Chata Hliněnka</h3>
             <p className="booking__desc">Útulná chata v přírodě pro dokonalý odpočinek i aktivní pobyt.</p>

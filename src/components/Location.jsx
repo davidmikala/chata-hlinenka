@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import droneImg from '../assets/figma/drone.webp';
+import { Photo } from '../content/photos.jsx';
 import { SectionHead } from './ui.jsx';
 import './Location.css';
 
@@ -37,7 +37,7 @@ export default function Location() {
         </SectionHead>
 
         <figure className="location__photo" data-reveal="clip">
-          <img ref={imgRef} src={droneImg} alt="Chata Hliněnka z dronu, obklopená zahradou a poli" loading="lazy" />
+          <Photo ref={imgRef} slot="location" loading="lazy" />
         </figure>
 
 

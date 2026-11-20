@@ -1,9 +1,4 @@
-import i1 from '../assets/photos/obyvak-brizy.webp';
-import i2 from '../assets/photos/chata-zahrada.webp';
-import i3 from '../assets/photos/chata-svah.webp';
-import i4 from '../assets/photos/jidelna-stul.webp';
-import i5 from '../assets/photos/koupelna-vana.webp';
-import i6 from '../assets/photos/obyvak-krb.webp';
+import { Photo } from '../content/photos.jsx';
 import brush from '../assets/figma/brush-intro.svg';
 import { SectionHead } from './ui.jsx';
 import './Intro.css';
@@ -11,16 +6,16 @@ import './Intro.css';
 // m = pořadí na mobilu, wide = na mobilu přes celou šířku (fotky na šířku)
 const COLUMNS = [
   [
-    { src: i1, alt: 'Obývací pokoj s březovými kmeny a zelenou sedačkou', tall: true, m: 2 },
-    { src: i2, alt: 'Chata Hliněnka se zahradou a přístřeškem', m: 1, wide: true },
+    { slot: 'intro1', tall: true, m: 2 },
+    { slot: 'intro2', m: 1, wide: true },
   ],
   [
-    { src: i3, alt: 'Chata na svahu v podzimních barvách', m: 4, wide: true },
-    { src: i4, alt: 'Jídelní stůl s ovocem a tulipány', tall: true, m: 3 },
+    { slot: 'intro3', m: 4, wide: true },
+    { slot: 'intro4', tall: true, m: 3 },
   ],
   [
-    { src: i5, alt: 'Koupelna s černou volně stojící vanou', tall: true, m: 5 },
-    { src: i6, alt: 'Obývací pokoj s krbovými kamny', m: 6, pos: '22% 50%' },
+    { slot: 'intro5', tall: true, m: 5 },
+    { slot: 'intro6', m: 6, pos: '22% 50%' },
   ],
 ];
 
@@ -43,12 +38,12 @@ export default function Intro() {
             <div className="intro__col" key={c}>
               {col.map((img, r) => (
                 <figure
-                  key={img.alt}
+                  key={img.slot}
                   className={`intro__img ${img.tall ? 'is-tall' : ''} ${img.wide ? 'is-wide' : ''}`}
                   data-reveal="clip"
                   style={{ '--d': `${c * 120 + r * 180}ms`, '--m': img.m, '--pos': img.pos }}
                 >
-                  <img src={img.src} alt={img.alt} loading="lazy" />
+                  <Photo slot={img.slot} loading="lazy" sizes="(max-width: 900px) 100vw, 380px" />
                 </figure>
               ))}
             </div>

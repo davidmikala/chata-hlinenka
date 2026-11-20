@@ -1,47 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import g1 from '../assets/photos/loznice-modra.webp';
-import g2 from '../assets/photos/kuchyne.webp';
-import g3 from '../assets/photos/sprcha.webp';
-import g4 from '../assets/photos/obyvak-sedacka.webp';
-import g5 from '../assets/photos/chata-podzim.webp';
-import g6 from '../assets/photos/loznice-kvetiny.webp';
-import g7 from '../assets/photos/koupelna-umyvadlo.webp';
-import g8 from '../assets/photos/kuchyne-detail.webp';
-import g9 from '../assets/photos/terasa-vecer.webp';
-import g10 from '../assets/photos/stodola-terce.webp';
-import g11 from '../assets/photos/obyvak-kamna.webp';
-import g12 from '../assets/photos/chata-terasa.webp';
-import g13 from '../assets/photos/loznice-listy.webp';
-import g14 from '../assets/photos/stodola-bar.webp';
-import g15 from '../assets/photos/loznice-okno.webp';
-import g16 from '../assets/photos/brizy-detail.webp';
-import g17 from '../assets/photos/chata-zadni.webp';
+import { useGallery, Photo } from '../content/photos.jsx';
 import { SectionHead, ReserveButton, ScrollCue, ArrowButton } from './ui.jsx';
 import './Gallery.css';
 
-const IMAGES = [
-  { src: g1, alt: 'Ložnice s tmavě modrou stěnou a dřevěnou postelí', w: 250 },
-  { src: g2, alt: 'Kuchyně se zelenými skříňkami', w: 250 },
-  { src: g3, alt: 'Sprchový kout v koupelně s dřevěným obkladem', w: 250 },
-  { src: g4, alt: 'Obývací pokoj se sedačkou, březovými kmeny a jídelnou', w: 560 },
-  { src: g5, alt: 'Chata Hliněnka a stodola v podzimní zahradě', w: 560 },
-  { src: g6, alt: 'Ložnice s květinovým povlečením', w: 250 },
-  { src: g7, alt: 'Koupelna s kulatým podsvíceným zrcadlem', w: 250 },
-  { src: g8, alt: 'Varná konvice a topinkovač v retro stylu', w: 250 },
-  { src: g9, alt: 'Krytá terasa s lavicemi za večerního osvětlení', w: 263 },
-  { src: g10, alt: 'Podsvícený šipkový terč ve stodole', w: 263 },
-  { src: g11, alt: 'Obývací pokoj s krbovými kamny a zelenou sedačkou', w: 567 },
-  { src: g12, alt: 'Chata s dřevěnou terasou mezi stromy', w: 567 },
-  { src: g13, alt: 'Ložnice s povlečením s motivem listů', w: 263 },
-  { src: g14, alt: 'Kuchyňka ve stodole s cihlovou stěnou', w: 263 },
-  { src: g15, alt: 'Ložnice s posezením u okna', w: 567 },
-  { src: g16, alt: 'Březové kmeny u vstupu do kuchyně', w: 263 },
-  { src: g17, alt: 'Chata Hliněnka při západu slunce', w: 567 },
-];
-
-const ROW1 = IMAGES.slice(0, 4);
-const ROW2 = IMAGES.slice(4, 8);
-const CAROUSEL = IMAGES.slice(8);
+// fotky galerie spravuje zákazník v administraci (/admin), výchozí jsou v content/photo-slots.js
 
 function Tile({ img, index, onOpen, delay }) {
   return (
@@ -53,7 +15,7 @@ function Tile({ img, index, onOpen, delay }) {
       aria-label={`Zvětšit fotografii: ${img.alt}`}
       data-reveal="zoom"
     >
-      <img src={img.src} alt={img.alt} loading="lazy" />
+      <Photo photo={img} loading="lazy" sizes="(max-width: 900px) 75vw, 600px" />
       <span className="g-tile__zoom" aria-hidden="true">
         +
       </span>
@@ -62,6 +24,10 @@ function Tile({ img, index, onOpen, delay }) {
 }
 
 export default function Gallery() {
+  const IMAGES = useGallery();
+  const ROW1 = IMAGES.slice(0, 4);
+  const ROW2 = IMAGES.slice(4, 8);
+  const CAROUSEL = IMAGES.slice(8);
   const [lightbox, setLightbox] = useState(null);
   const trackRef = useRef(null);
   const [edges, setEdges] = useState({ start: true, end: false });
@@ -92,19 +58,19 @@ export default function Gallery() {
       <div className="gallery__rows">
         <div className="gallery__row">
           {ROW1.map((img, i) => (
-            <Tile key={img.alt} img={img} index={i} onOpen={setLightbox} delay={i * 90} />
+            <Tile key={i} img={img} index={i} onOpen={setLightbox} delay={i * 90} />
           ))}
         </div>
         <div className="gallery__row">
           {ROW2.map((img, i) => (
-            <Tile key={img.alt} img={img} index={i + 4} onOpen={setLightbox} delay={i * 90} />
+            <Tile key={i + 4} img={img} index={i + 4} onOpen={setLightbox} delay={i * 90} />
           ))}
         </div>
 
         <div className="gallery__carousel">
           <div className="gallery__track" ref={trackRef} onScroll={updateEdges}>
             {CAROUSEL.map((img, i) => (
-              <Tile key={img.alt} img={img} index={i + 8} onOpen={setLightbox} delay={i * 90} />
+              <Tile key={i + 8} img={img} index={i + 8} onOpen={setLightbox} delay={i * 90} />
             ))}
           </div>
           <div className="gallery__nav gallery__nav--prev">
@@ -121,12 +87,12 @@ export default function Gallery() {
         <ScrollCue tone="dark" />
       </div>
 
-      {lightbox !== null && <Lightbox index={lightbox} onChange={setLightbox} onClose={() => setLightbox(null)} />}
+      {lightbox !== null && <Lightbox images={IMAGES} index={lightbox} onChange={setLightbox} onClose={() => setLightbox(null)} />}
     </section>
   );
 }
 
-function Lightbox({ index, onChange, onClose }) {
+function Lightbox({ images: IMAGES, index, onChange, onClose }) {
   const total = IMAGES.length;
   const go = useCallback((d) => onChange((index + d + total) % total), [index, onChange, total]);
   const touchX = useRef(null);
@@ -163,7 +129,7 @@ function Lightbox({ index, onChange, onClose }) {
       }}
     >
       <figure className="lightbox__figure" onClick={(e) => e.stopPropagation()}>
-        <img key={img.src} src={img.src} alt={img.alt} />
+        <Photo key={img.src} photo={img} sizes="100vw" style={{ objectPosition: '50% 50%' }} />
         <figcaption>
           <span>{img.alt}</span>
           <span>
