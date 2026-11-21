@@ -1,12 +1,15 @@
-import { Photo } from '../content/photos.jsx';
+import barnImg from '../assets/photos/stodola-interier.webp';
+import tableImg from '../assets/photos/stodola-stul.webp';
+import kitchenImg from '../assets/photos/stodola-kuchynka.webp';
+import dartsImg from '../assets/photos/stodola-sipky.webp';
 import { SectionHead, ReserveButton, ScrollCue } from './ui.jsx';
 import './Barn.css';
 
 // pohled dovnitř stodoly
 const INSIDE = [
-  { slot: 'barnTable', title: 'Stůl pro celou partu' },
-  { slot: 'barnKitchen', title: 'Kuchyňka a krbová kamna' },
-  { slot: 'barnDarts', title: 'Šipky na dlouhé večery' },
+  { src: tableImg, alt: 'Velký dřevěný stůl ve stodole', title: 'Stůl pro celou partu' },
+  { src: kitchenImg, alt: 'Kuchyňka s vinotékou a krbovými kamny ve stodole', title: 'Kuchyňka a krbová kamna' },
+  { src: dartsImg, alt: 'Osvětlený šipkový terč s cedulí Darts Zone na dřevěné stěně stodoly', title: 'Šipky na dlouhé večery' },
 ];
 
 export default function Barn() {
@@ -18,7 +21,7 @@ export default function Barn() {
         </SectionHead>
 
         <figure className="barn__photo" data-reveal="zoom">
-          <Photo slot="barnMain" loading="lazy" sizes="(max-width: 900px) 100vw, 740px" />
+          <img src={barnImg} alt="Interiér stodoly s dlouhými dubovými stoly, krbovými kamny a kuchyňkou" loading="lazy" />
         </figure>
 
         <p className="barn__text" data-reveal>
@@ -30,7 +33,7 @@ export default function Barn() {
           {INSIDE.map((p, i) => (
             <li key={p.title} data-reveal style={{ '--d': `${i * 120}ms` }}>
               <figure className="barn__tile">
-                <Photo slot={p.slot} loading="lazy" sizes="(max-width: 600px) 80vw, 380px" />
+                <img src={p.src} alt={p.alt} loading="lazy" />
                 <figcaption>{p.title}</figcaption>
               </figure>
             </li>

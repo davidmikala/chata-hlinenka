@@ -16,12 +16,7 @@ npm run preview    # náhled buildu
 
 ```
 src/
-  main.jsx                 vstup: /admin = administrace fotek, jinak web (site.jsx)
-  site.jsx, App.jsx        web a pořadí sekcí
-  content/photo-slots.js   seznam fotek, které jde měnit v administraci (+ výchozí soubory)
-  content/photos.jsx       načtení fotek ze Sanity, <Photo slot="…" />, záložní fotky
-  content/sanity-project.js  projectId projektu Sanity
-  admin/                   administrace (Sanity Studio) na adrese /admin
+  main.jsx, App.jsx        vstup aplikace, pořadí sekcí
   styles/global.css        design tokeny (barvy, písma), typografie, reveal animace
   hooks/useReveal.js       animace prvků při scrollu ([data-reveal])
   components/              jedna sekce = .jsx + .css
@@ -34,34 +29,8 @@ src/
   assets/photos/           vlastní fotky chaty (interiér, exteriér) převedené do WebP
   assets/avatars/          portréty k ukázkovým recenzím
 scripts/optimize-images.mjs  převod velkých PNG z Figmy do WebP
-scripts/sanity-seed.mjs      jednorázové nahrání současných fotek do Sanity
 design-assets/             originální exporty z Figmy (nejsou součástí buildu)
 ```
-
-## Správa fotek (pro zákazníka)
-
-Fotky na webu si zákazník mění sám na adrese **`/admin`** (např. `https://chata-hlinenka.vercel.app/admin`).
-Přihlásí se, vybere sekci (Úvod, Vítejte, Stodola, Galerie, Ceník…), u fotky klikne na „Nahradit“
-a dá **Publikovat** – změna je na webu během pár vteřin (bez nového nasazení).
-
-- U každé fotky jde nástrojem ořezu (✂) nastavit bod, který má zůstat vidět – web podle něj ořezává
-  fotky na mobilu i počítači.
-- Galerie: pořadí se mění přetažením; první 4 fotky = 1. řada, další 4 = 2. řada, zbytek je v posuvníku.
-- Když v administraci fotka chybí nebo Sanity neodpovídá, web použije výchozí fotku ze `src/assets`.
-- Které fotky jdou měnit, určuje `src/content/photo-slots.js`.
-
-**Jednorázové nastavení** (dělá správce webu):
-
-1. Na [sanity.io/manage](https://www.sanity.io/manage) založit projekt s datasetem `production`
-   (veřejný) a jeho ID zapsat do `src/content/sanity-project.js`.
-2. V projektu → API → CORS origins přidat `https://chata-hlinenka.vercel.app` a `http://localhost:5174`
-   (obojí s „Allow credentials“).
-3. Nahrát současné fotky do Sanity:
-   ```bash
-   npx sanity login
-   npx sanity exec scripts/sanity-seed.mjs --with-user-token
-   ```
-4. V projektu → Members pozvat zákazníka e-mailem s rolí **Editor**.
 
 ## Co je potřeba před spuštěním naostro
 

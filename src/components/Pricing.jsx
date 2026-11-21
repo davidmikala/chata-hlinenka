@@ -1,4 +1,6 @@
-import { Photo } from '../content/photos.jsx';
+import yearImg from '../assets/photos/jidelna-krb.webp';
+import summerImg from '../assets/photos/chata-veranda.webp';
+import holidayImg from '../assets/photos/stodola-vecer.webp';
 import { SectionHead, ReserveButton } from './ui.jsx';
 import './Pricing.css';
 
@@ -9,7 +11,8 @@ const SEASONS = [
     period: 'Pozdní podzim · zima · jaro',
     title: 'Během roku',
     text: 'Klidné víkendy, toulky lesem a večery u kamen.',
-    slot: 'pricingYear',
+    img: yearImg,
+    alt: 'Jídelní stůl a krbová kamna v obývacím pokoji',
     prices: [
       { label: 'Týdenní pobyt', value: '28 000 Kč' },
       { label: 'Víkend (2–3 noci)', value: '20 000 Kč' },
@@ -20,7 +23,8 @@ const SEASONS = [
     period: 'Červenec · srpen',
     title: 'Letní prázdniny',
     text: 'Letní rána, lesní stezky a dlouhé večery na terase.',
-    slot: 'pricingSummer',
+    img: summerImg,
+    alt: 'Chata Hliněnka s terasou a posezením venku',
     prices: [{ label: 'Týdenní pobyt', value: '35 000 Kč' }],
     hint: 'Červenec a srpen',
   },
@@ -29,7 +33,8 @@ const SEASONS = [
     period: 'Zimní svátky',
     title: 'Vánoce a Silvestr',
     text: 'Na konci roku je nejkrásnější být spolu.',
-    slot: 'pricingHoliday',
+    img: holidayImg,
+    alt: 'Večerní posezení u velkého stolu ve stodole',
     prices: [
       { label: 'Vánoční pobyt', value: 'Na vyžádání' },
       { label: 'Silvestrovský pobyt', value: 'Na vyžádání' },
@@ -49,7 +54,7 @@ export default function Pricing() {
           {SEASONS.map((s, i) => (
             <article className="price-card" key={s.num} data-reveal style={{ '--d': `${i * 120}ms` }}>
               <figure className="price-card__media">
-                <Photo slot={s.slot} loading="lazy" sizes="(max-width: 680px) 100vw, (max-width: 1000px) 50vw, 380px" />
+                <img src={s.img} alt={s.alt} loading="lazy" />
                 <span className="price-card__period">{s.period}</span>
               </figure>
               <div className="price-card__body">

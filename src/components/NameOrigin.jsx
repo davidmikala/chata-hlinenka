@@ -1,4 +1,5 @@
-import { Photo } from '../content/photos.jsx';
+import clayImg from '../assets/photos/hlinena-kamna.webp';
+import placeImg from '../assets/photos/chata-krajina.webp';
 import './NameOrigin.css';
 
 /*
@@ -64,10 +65,10 @@ export default function NameOrigin() {
 
         <div className="origin__media">
           <figure className="origin__photo origin__photo--main" data-reveal="clip">
-            <Photo slot="originMain" loading="lazy" sizes="(max-width: 860px) 100vw, 500px" />
+            <img src={clayImg} alt="Krbová kamna s hliněnou omítkou v obývacím pokoji" loading="lazy" />
           </figure>
           <figure className="origin__photo origin__photo--small" data-reveal style={{ '--d': '200ms' }}>
-            <Photo slot="originSmall" loading="lazy" sizes="260px" />
+            <img src={placeImg} alt="Chata Hliněnka v krajině pod Hostýnskými vrchy" loading="lazy" />
           </figure>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Photo } from '../content/photos.jsx';
+import heroImg from '../assets/figma/drone.webp';
 import { ReserveButton, ScrollCue } from './ui.jsx';
 import './Hero.css';
 
@@ -27,7 +27,7 @@ export default function Hero() {
   return (
     <section className="hero" id="top" aria-label="Úvod">
       <div className="hero__bg" ref={bgRef} aria-hidden="true">
-        <Photo slot="hero" alt="" fetchPriority="high" />
+        <img src={heroImg} alt="" fetchpriority="high" />
       </div>
       <div className="hero__overlay" aria-hidden="true" />
 

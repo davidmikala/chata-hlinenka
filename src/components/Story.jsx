@@ -1,4 +1,4 @@
-import { Photo } from '../content/photos.jsx';
+import storyImg from '../assets/photos/stodola-pivo.webp';
 import './Story.css';
 
 export default function Story() {
@@ -6,7 +6,7 @@ export default function Story() {
     <section className="story" id="pribeh">
       <div className="container story__inner">
         <figure className="story__media" data-reveal="clip">
-          <Photo slot="story" loading="lazy" sizes="(max-width: 820px) 100vw, 520px" />
+          <img src={storyImg} alt="Orosené pivo na dubovém stole ve stodole u kamen" loading="lazy" />
         </figure>
 
         <div className="story__body">
