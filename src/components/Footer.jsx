@@ -82,8 +82,8 @@ export default function Footer() {
             <a href="#gdpr" className="footer__link">
               GDPR
             </a>
-            <a href="https://bookujto.cz/" target="_blank" rel="noopener noreferrer" className="footer__link">
-              Rezervační systém Bookujto
+            <a href="#rezervace" className="footer__link">
+              Náš rezervační systém
             </a>
             <a href="#top" className="footer__top" aria-label="Zpět nahoru">
               <img src={arrowUp} alt="" width="18" height="18" />
