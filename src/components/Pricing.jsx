@@ -92,7 +92,7 @@ export default function Pricing() {
               ↺
             </span>
             <div>
-              <strong>Vratná kauce 10 000 Kč</strong>
+              <strong>Vratná kauce 5 000 Kč</strong>
               <span>Platba převodem 2 dny před příjezdem, vrácení do 5 dnů po odjezdu dle podmínek ubytování.</span>
             </div>
           </div>
