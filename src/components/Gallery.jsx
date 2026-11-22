@@ -164,12 +164,6 @@ function Lightbox({ index, onChange, onClose }) {
     >
       <figure className="lightbox__figure" onClick={(e) => e.stopPropagation()}>
         <img key={img.src} src={img.src} alt={img.alt} />
-        <figcaption>
-          <span>{img.alt}</span>
-          <span>
-            {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-          </span>
-        </figcaption>
       </figure>
       <div className="lightbox__prev" onClick={(e) => e.stopPropagation()}>
         <ArrowButton direction="prev" tone="light" onClick={() => go(-1)} label="Předchozí fotografie" />
