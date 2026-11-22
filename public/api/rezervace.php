@@ -12,6 +12,13 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store, max-age=0');
 
+// Nezavazny health-check pouze pro overeni dostupnosti PHP (bez pristupu k datům).
+if (($_GET['action'] ?? '') === 'health') {
+    header('Content-Type: application/json; charset=utf-8');
+    echo '{"ok":true,"service":"php"}';
+    exit;
+}
+
 function send_json(array $value, int $status = 200): never {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
