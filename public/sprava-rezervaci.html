@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Správa rezervací – Chata Hliněnka</title>
+<style>
+:root{--green:#214b37;--paper:#f4f2eb;--line:#dce2d7;--red:#a33f32}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:#20392a;font:15px/1.55 system-ui,-apple-system,sans-serif}
+header{padding:24px max(20px,calc((100vw - 1140px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px;background:#0b2b21;color:#fff}
+header strong{font:28px Georgia,serif}header a{color:#fff}
+main{max-width:1150px;margin:35px auto 80px;padding:0 18px}
+h1,h2,h3{font-family:Georgia,serif;font-weight:400}h1{font-size:36px}h2{font-size:26px;margin:0 0 17px}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:24px;margin:23px 0;box-shadow:0 12px 25px rgba(0,0,0,.03)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+button,.btn{border:1px solid var(--green);border-radius:7px;background:var(--green);color:white;padding:10px 16px;font:inherit;cursor:pointer}
+button:hover{filter:brightness(.88)}button:disabled{opacity:.5;cursor:default}
+.secondary{background:white;color:var(--green);border-color:#b8cabb}.danger{background:#fff;color:var(--red);border-color:#d8a49e}
+input,textarea{width:100%;border:1px solid #cdd6cc;border-radius:6px;background:white;color:#263c2c;font:inherit;padding:10px}
+label{display:block;font-size:13px;font-weight:600;color:#435948}
+label input,label textarea{margin-top:5px}small,.muted{color:#667468}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.kpi{background:#edf2ec;border-radius:10px;padding:20px}.kpi b{display:block;font:34px Georgia,serif}
+.record{padding:18px 0;border-top:1px solid var(--line)}.record p{margin:6px 0;font-size:13px;overflow-wrap:anywhere}
+.record .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.status{display:inline-block;padding:3px 9px;border-radius:99px;background:#ede8c8;color:#6b5819;font-size:12px}
+.status.approved{background:#d8ebd9;color:#236033}.status.rejected{background:#eee4e1;color:#754c43}
+.price-row{display:grid;grid-template-columns:2fr 1.3fr 1.3fr 1fr 1fr auto;gap:10px;align-items:end;margin:11px 0}
+.price-row label{min-width:0}.price-row input{min-width:0}
+.notice{background:#edf2e9;border-radius:8px;padding:13px 15px;margin:18px 0}.warning{color:#a33f32}
+.hidden{display:none!important}#feedback{margin-top:12px}#code{max-width:220px}
+footer{padding:20px;text-align:center;color:#758175;font-size:12px}
+@media(max-width:780px){.grid,.grid2,.kpis{grid-template-columns:1fr}.price-row{grid-template-columns:1fr 1fr}.price-row label:first-child{grid-column:1/-1}.panel{padding:17px}header strong{font-size:23px}}
+</style>
+</head>
+<body>
+<header><strong>Chata Hliněnka · Správa rezervací</strong><a href="/">← Zpět na web</a></header>
+<main>
+<div id="login">
+  <h1>Bezpečné přihlášení</h1>
+  <p>Přihlašovací kód zašleme na e-mail provozovatele <b>david@mikala.cz</b>. Platí deset minut.</p>
+  <div class="panel">
+    <button id="requestCode">Odeslat přihlašovací kód</button>
+    <div class="row" style="margin-top:18px">
+      <label>Šestimístný kód<input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456"></label>
+      <button id="verify" style="align-self:end">Přihlásit</button>
+    </div>
+    <p class="muted">Administrace není přístupná hostům. Každé přihlášení potvrzuje provozovatel z e-mailu.</p>
+  </div>
+</div>
+<div id="admin" class="hidden">
+  <div class="row" style="justify-content:space-between">
+    <div><h1>Správa rezervací</h1><p class="muted">Poptávky, potvrzené termíny, ceník a iCal</p></div>
+    <button class="secondary" id="logout">Odhlásit</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <section class="panel"><h2>Poptávky a rezervace</h2><div id="records"></div></section>
+  <section class="panel">
+    <h2>Ruční blokace termínu</h2>
+    <form id="blockForm">
+      <div class="grid">
+        <label>Příjezd<input required type="date" id="bs"></label>
+        <label>Odjezd<input required type="date" id="be"></label>
+        <label>Jméno / důvod<input required id="bn" maxlength="120" placeholder="Např. vlastní pobyt, portál"></label>
+      </div>
+      <p><button>Přidat obsazený termín</button></p>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>Sezónní ceník pro kalkulaci</h2>
+    <div class="notice">Výchozí ceny z dřívějšího prototypu byly zkušební, proto nejsou automaticky zveřejněny. Zadejte zde skutečné ceny za celou chatu na jednu noc. Při nulové ceně host uvidí „Cena na vyžádání“. Ceník pobytových balíčků na webu zůstává zachován.</div>
+    <label>Základní cena za noc (Kč)<input id="base" type="number" min="0" max="200000" value="0" style="max-width:230px"></label>
+    <div id="rates"></div>
+    <div class="row"><button class="secondary" id="addRate" type="button">+ Přidat období</button><button id="saveRates" type="button">Uložit ceník</button></div>
+  </section>
+  <section class="panel">
+    <h2>Propojení ubytovacích portálů (iCal)</h2>
+    <p>Do portálů lze vložit níže uvedenou adresu pro automatické stahování potvrzené obsazenosti. Import externích kalendářů je zatím ruční přes soubor .ics; automatické načítání z cizích portálů ještě není nastaveno.</p>
+    <label>Exportní URL kalendáře<input id="icalUrl" readonly></label>
+    <div class="row" style="margin-top:15px">
+      <a class="btn" href="/api/rezervace.php?action=ical" download="hlinenka-obsazenost.ics">Stáhnout iCal</a>
+      <label style="flex:1;min-width:220px">Importovat soubor .ics<input type="file" id="icalFile" accept=".ics,text/calendar"></label>
+      <button type="button" id="importIcal">Importovat obsazené termíny</button>
+    </div>
+  </section>
+</div>
+<p id="feedback" role="status"></p>
+</main><footer>Chata Hliněnka · Soukromá administrace</footer>
+<script>
+'use strict';
+const API='/api/rezervace.php';
+const byId=id=>document.getElementById(id);
+const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const pretty=s=>s?new Date(s+'T12:00:00').toLocaleDateString('cs-CZ'):'—';
+const money=n=>n==null?'Cena na vyžádání':Number(n).toLocaleString('cs-CZ')+' Kč';
+function feedback(t,error=false){byId('feedback').textContent=t;byId('feedback').className=error?'warning':'notice';}
+async function get(action){
+  const r=await fetch(API+'?action='+encodeURIComponent(action),{cache:'no-store',credentials:'same-origin'});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.message||'Chyba serveru');return d;
+}
+async function post(action,data={}){
+  const r=await fetch(API+'?action='+encodeURIComponent(action),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(data)});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.message||'Chyba serveru');return d;
+}
+async function refresh(){
+  try{
+    const d=await get('admin');
+    byId('login').classList.add('hidden');byId('admin').classList.remove('hidden');
+    byId('icalUrl').value=location.origin+'/api/rezervace.php?action=ical';
+    const records=d.records||[];
+    byId('kpis').innerHTML=[['Čeká na schválení','pending'],['Potvrzeno','approved'],['Zamítnuto','rejected']].map(([label,status])=>'<div class="kpi">'+label+'<b>'+records.filter(r=>r.status===status).length+'</b></div>').join('');
+    byId('records').innerHTML=records.length ? [...records].reverse().map(r=>{
+      const status=({pending:'Čeká',approved:'Potvrzeno',rejected:'Zamítnuto'})[r.status]||r.status;
+      return '<div class="record"><div class="top"><strong>'+escapeHtml(r.name)+'</strong><span class="status '+escapeHtml(r.status)+'">'+escapeHtml(status)+'</span></div>'+
+       '<p>'+pretty(r.start)+' – '+pretty(r.end)+' · '+escapeHtml(r.people??'')+' osob · '+escapeHtml(r.source??'')+'</p>'+
+       '<p>'+escapeHtml(r.email??'')+' '+escapeHtml(r.phone??'')+'</p><p>'+money(r.price)+' · '+escapeHtml(r.message??'')+'</p>'+
+       '<div class="row">'+(r.status==='pending'?'<button data-act="approved" data-id="'+escapeHtml(r.id)+'">Schválit</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='approved'?'<button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zrušit termín</button>':'')+
+       '<button class="secondary" data-act="delete" data-id="'+escapeHtml(r.id)+'">Smazat záznam</button></div></div>';
+    }).join(''):'<p>Zatím nejsou žádné poptávky.</p>';
+    byId('base').value=Number(d.pricing?.base||0);
+    byId('rates').innerHTML='';
+    for(const r of d.pricing?.rates||[])rateRow(r);
+  }catch(e){byId('login').classList.remove('hidden');byId('admin').classList.add('hidden');feedback(e.message,true);}
+}
+function rateRow(r={name:'',start:'',end:'',price:0,min:1}){
+  const row=document.createElement('div');row.className='price-row';
+  const inputs=[['Období','name','text'],['Od','start','date'],['Do (odjezd)','end','date'],['Kč/noc','price','number'],['Min. nocí','min','number']];
+  for(const [title,key,type] of inputs){
+    const label=document.createElement('label');label.textContent=title;
+    const input=document.createElement('input');input.type=type;input.dataset.key=key;input.value=r[key]??'';if(type==='number')input.min=key==='min'?'1':'0';
+    label.append(input);row.append(label);
+  }
+  const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Smazat';del.onclick=()=>row.remove();row.append(del);byId('rates').append(row);
+}
+byId('addRate').onclick=()=>rateRow();
+byId('requestCode').onclick=async()=>{
+  try{const d=await post('request-code');feedback(d.message);}catch(e){feedback(e.message,true);}
+};
+byId('verify').onclick=async()=>{
+  try{await post('verify-code',{code:byId('code').value.trim()});feedback('Přihlášeno.');await refresh();}catch(e){feedback(e.message,true);}
+};
+byId('logout').onclick=async()=>{try{await post('logout');byId('admin').classList.add('hidden');byId('login').classList.remove('hidden');feedback('Odhlášeno.');}catch(e){feedback(e.message,true);}};
+byId('records').onclick=async(e)=>{
+  const button=e.target.closest('button[data-act]');if(!button)return;
+  const id=button.dataset.id,act=button.dataset.act;
+  if(act==='delete'&&!confirm('Opravdu odstranit tento záznam?'))return;
+  if(act==='rejected'&&!confirm('Opravdu zrušit/zamítnout termín?'))return;
+  try{const d=await post(act==='delete'?'delete':'decision',act==='delete'?{id}:{id,status:act});feedback(d.notified===false?'Změna uložena, ale potvrzovací e-mail se nepodařilo odeslat.':'Změna uložena.');await refresh();}catch(e){feedback(e.message,true);}
+};
+byId('blockForm').onsubmit=async(e)=>{
+  e.preventDefault();try{await post('block',{start:byId('bs').value,end:byId('be').value,name:byId('bn').value});e.target.reset();feedback('Termín je zablokovaný.');await refresh();}catch(e){feedback(e.message,true);}
+};
+byId('saveRates').onclick=async()=>{
+  try{
+    const rates=[...byId('rates').children].map(row=>Object.fromEntries([...row.querySelectorAll('input[data-key]')].map(input=>[input.dataset.key,input.type==='number'?Number(input.value):input.value])));
+    await post('pricing',{base:Number(byId('base').value),rates});feedback('Ceník byl uložen a promítne se do orientačních kalkulací.');await refresh();
+  }catch(e){feedback(e.message,true);}
+};
+byId('importIcal').onclick=async()=>{
+  const file=byId('icalFile').files[0];if(!file){feedback('Nejprve vyberte soubor .ics.',true);return;}
+  try{
+    const d=await post('import-ical',{ical:await file.text()});
+    feedback('Importováno: '+d.imported+' termínů. Přeskočeno: '+d.skipped+'.');
+    byId('icalFile').value='';await refresh();
+  }catch(e){feedback(e.message,true);}
+};
+get('session').then(d=>{if(d.admin)refresh();}).catch(e=>feedback('Nelze ověřit přihlášení: '+e.message,true));
+</script>
+</body></html>

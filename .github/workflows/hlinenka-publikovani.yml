@@ -26,6 +26,9 @@ jobs:
       - name: Instalovat zavislosti
         run: npm ci
 
+      - name: Overit PHP rezervacni API
+        run: php -l public/api/rezervace.php
+
       - name: Sestavit web
         run: npm run build
 

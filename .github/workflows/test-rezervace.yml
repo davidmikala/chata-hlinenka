@@ -1,0 +1,23 @@
+name: Kontrola rezervacniho systemu
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nacist projekt
+        uses: actions/checkout@v4
+      - name: Nastavit Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalovat zavislosti
+        run: npm ci
+      - name: Overit PHP syntaxi
+        run: php -l public/api/rezervace.php
+      - name: Sestavit web
+        run: npm run build
