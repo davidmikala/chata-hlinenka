@@ -12,7 +12,7 @@ const dateDiff = (a, b) => (Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:0
 const currency = (n) => Number(n).toLocaleString('cs-CZ') + ' Kč';
 const WEEKDAYS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
-const APPROVED_PRICING = { offShort: 20000, offWeek: 28000, extraNight: 5000, summerWeek: 35000 };
+const APPROVED_PRICING = { offShort: 20000, offWeek: 28000, extraNight: 5000, summerShort: 28000, summerWeek: 35000 };
 
 function seasonForNight(iso) {
   const md = iso.slice(5);
@@ -34,7 +34,7 @@ function quote(pricing, start, end) {
     seasons.add(seasonForNight(day));
   }
   const type = seasons.size === 1 ? [...seasons][0] : 'mixed';
-  const min = seasons.has('summer') ? 7 : 2;
+  const min = seasons.has('summer') ? 4 : 2;
   const label = {
     off: 'Mimo sezónu',
     summer: 'Letní prázdniny',
@@ -51,9 +51,13 @@ function quote(pricing, start, end) {
       total = weeks * p.offWeek + Math.min(p.offWeek, rest * p.extraNight);
     }
   } else if (nights >= min && type === 'summer') {
-    const weeks = Math.floor(nights / 7);
-    const rest = nights % 7;
-    total = weeks * p.summerWeek + rest * p.extraNight;
+    if (nights === 4) total = p.summerShort;
+    else if (nights <= 7) total = p.summerWeek;
+    else {
+      const weeks = Math.floor(nights / 7);
+      const rest = nights % 7;
+      total = weeks * p.summerWeek + rest * p.extraNight;
+    }
   }
   return { nights, min, total, type, label };
 }
