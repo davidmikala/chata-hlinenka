@@ -44,3 +44,31 @@ jobs:
           test "$code" = 401
           jq -e '.ok == false' /tmp/hlinenka-admin-response.json
           curl -fsS 'http://127.0.0.1:8765/api/rezervace.php?action=ical' | grep -Fq 'BEGIN:VCALENDAR'
+
+      - name: Zkontrolovat javascript administrace
+        run: |
+          python3 -c 'from pathlib import Path; s=Path("dist/sprava-rezervaci.html").read_text(); Path("/tmp/hlinenka-admin.mjs").write_text(s.split("<script>",1)[1].split("</script>",1)[0])'
+          node --check /tmp/hlinenka-admin.mjs
+
+      - name: Otestovat schvalene ceny pobytu a minimalni delku
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='http://127.0.0.1:8765/api/rezervace.php'
+          curl -fsS "$base?action=calendar" | jq -e '.pricing.offShort == 20000 and .pricing.offWeek == 28000 and .pricing.extraNight == 5000 and .pricing.summerWeek == 35000'
+          check_price() {
+            local start="$1" end="$2" price="$3" min="$4"
+            curl -fsS "$base?action=quote&start=$start&end=$end" |
+              jq -e --argjson expected "$price" --argjson minimum "$min" \
+                '.ok == true and .total == $expected and .min == $minimum'
+          }
+          check_price 2027-04-09 2027-04-11 20000 2
+          check_price 2027-04-09 2027-04-12 20000 2
+          check_price 2027-04-09 2027-04-13 25000 2
+          check_price 2027-04-09 2027-04-14 28000 2
+          check_price 2027-04-09 2027-04-16 28000 2
+          check_price 2027-04-09 2027-04-10 null 2
+          check_price 2027-07-03 2027-07-10 35000 7
+          check_price 2027-07-03 2027-07-09 null 7
+          check_price 2027-12-24 2027-12-27 null 2
+          check_price 2027-06-30 2027-07-07 null 7
