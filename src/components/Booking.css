@@ -71,6 +71,16 @@
 }
 .hcal__day:hover:not(:disabled) { border-color: #315943; background: #d3e6d1; }
 .hcal__day:disabled { cursor: default; opacity: .45; }
+/* Při výpadku API neprezentujeme termíny jako volné. */
+.hcal__day.is-unverified,
+.hcal__day.is-unverified:disabled {
+  opacity: 1;
+  background: #e8e8e5;
+  border-color: #ddded9;
+  color: #82877f;
+  cursor: not-allowed;
+}
+.hcal__months { min-height: 285px; }
 .hcal__day.is-busy { opacity: 1; background: #d3b5ab; border-color: #d3b5ab; color: #663b32; }
 .hcal__day.is-chosen { opacity: 1; background: #32644a; border-color: #32644a; color: white; }
 .hcal__day.is-today { outline: 2px solid #ba9261; outline-offset: 1px; }
