@@ -125,7 +125,12 @@
   aspect-ratio: 4 / 5;
 }
 
+.origin__photo--small img {
+  object-fit: contain;
+}
+
 .origin__photo--small {
+  background: white;
   position: absolute;
   left: 0;
   bottom: 0;

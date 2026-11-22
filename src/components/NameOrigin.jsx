@@ -1,5 +1,5 @@
 import clayImg from '../assets/photos/hlinena-kamna.webp';
-import placeImg from '../assets/photos/chata-krajina.webp';
+import logoImg from '../assets/photos/logo-zemite.webp';
 import './NameOrigin.css';
 
 /*
@@ -68,7 +68,7 @@ export default function NameOrigin() {
             <img src={clayImg} alt="Krbová kamna s hliněnou omítkou v obývacím pokoji" loading="lazy" />
           </figure>
           <figure className="origin__photo origin__photo--small" data-reveal style={{ '--d': '200ms' }}>
-            <img src={placeImg} alt="Chata Hliněnka v krajině pod Hostýnskými vrchy" loading="lazy" />
+            <img src={logoImg} alt="Logo Chaty Hliněnka" loading="lazy" />
           </figure>
         </div>
       </div>
