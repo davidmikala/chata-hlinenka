@@ -85,23 +85,59 @@ function overlaps(array $rows, string $start, string $end, ?string $ignore = nul
     }
     return false;
 }
+// Schválený ceník za celou chatu – balíčky pobytů, nikoli cena za každý den.
+// Staré orientační denní sazby z prototypu se pro výpočet nepoužívají.
+function pricing_values(array $d): array {
+    $defaults = ['offShort' => 20000, 'offWeek' => 28000, 'extraNight' => 5000, 'summerWeek' => 35000];
+    $custom = $d['pricing'] ?? [];
+    if (!is_array($custom)) return $defaults;
+    foreach ($defaults as $key => $value) {
+        if (isset($custom[$key]) && is_int($custom[$key]) && $custom[$key] > 0) {
+            $defaults[$key] = $custom[$key];
+        }
+    }
+    return $defaults;
+}
+function season_for_night(string $day): string {
+    $mday = substr($day, 5); // MM-DD
+    // Svátky z původního kalendáře: 22.12. až 2.1. včetně – cena na vyžádání.
+    if ($mday >= '12-22' || $mday < '01-03') return 'holiday';
+    if ($mday >= '07-01' && $mday < '09-01') return 'summer';
+    return 'off';
+}
 function price_quote(array $d, string $start, string $end): array {
-    $p = $d['pricing'] ?? [];
-    $base = (int)($p['base'] ?? 0);
-    $total = 0; $min = 1; $complete = true;
+    $p = pricing_values($d);
     $nights = days_between($start, $end);
+    $seasons = [];
     for ($i = 0; $i < $nights; $i++) {
         $day = gmdate('Y-m-d', strtotime($start.' 12:00:00 UTC') + $i * 86400);
-        $t = ['price' => $base, 'min' => 1];
-        foreach ($p['rates'] ?? [] as $rate) {
-            if (($rate['start'] ?? '') <= $day && $day < ($rate['end'] ?? '')) $t = $rate;
-        }
-        $min = max($min, (int)($t['min'] ?? 1));
-        $price = (int)($t['price'] ?? 0);
-        if ($price <= 0) $complete = false;
-        $total += $price;
+        $seasons[season_for_night($day)] = true;
     }
-    return ['nights' => $nights, 'min' => $min, 'total' => $complete ? $total : null];
+    $type = count($seasons) === 1 ? array_key_first($seasons) : 'mixed';
+    $minimum = $type === 'summer' || isset($seasons['summer']) ? 7 : 2;
+    $total = null;
+    $label = match ($type) {
+        'off' => 'Mimo sezónu',
+        'summer' => 'Letní prázdniny',
+        'holiday' => 'Vánoce a Silvestr',
+        default => 'Pobyt přes různá období',
+    };
+    if ($nights >= $minimum && $type === 'off') {
+        if ($nights <= 7) {
+            // 2 i 3 noci stejná cena. 4–6 nocí nesmí být dražších než celý týden.
+            $total = min($p['offWeek'], $p['offShort'] + max(0, $nights - 3) * $p['extraNight']);
+        } else {
+            $weeks = intdiv($nights, 7);
+            $remaining = $nights % 7;
+            $total = $weeks * $p['offWeek'] + min($p['offWeek'], $remaining * $p['extraNight']);
+        }
+    } elseif ($nights >= $minimum && $type === 'summer') {
+        $weeks = intdiv($nights, 7);
+        $remaining = $nights % 7;
+        $total = $weeks * $p['summerWeek'] + $remaining * $p['extraNight'];
+    }
+    // Svátky a pobyty zasahující přes více sezón potvrzuje vždy provozovatel.
+    return ['nights' => $nights, 'min' => $minimum, 'total' => $total, 'label' => $label, 'type' => $type];
 }
 function send_mail_text(string $to, string $subject, string $message, ?string $replyTo = null): bool {
     $headers = ['From: Chata Hlinenka <'.SENDER_MAIL.'>', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8'];
@@ -123,9 +159,16 @@ if ($method === 'GET') {
             return [
                 'occupied' => array_values(array_map(fn($r) => ['start' => $r['start'], 'end' => $r['end']],
                     array_filter($d['records'] ?? [], fn($r) => ($r['status'] ?? '') === 'approved'))),
-                'pricing' => $d['pricing'] ?? ['base' => 0, 'rates' => []],
+                'pricing' => pricing_values($d),
             ];
         });
+        send_json(['ok' => true] + $view);
+    }
+    if ($action === 'quote') {
+        $start = (string)($_GET['start'] ?? '');
+        $end = (string)($_GET['end'] ?? '');
+        check_dates($start, $end);
+        $view = data_store(fn(array &$d, bool &$save) => price_quote($d, $start, $end));
         send_json(['ok' => true] + $view);
     }
     if ($action === 'ical') {
@@ -145,7 +188,7 @@ if ($method === 'GET') {
         require_admin();
         $d = data_store(fn(array &$d, bool &$save) => $d);
         unset($d['otp'], $d['last_code_at'], $d['ip_times']);
-        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => $d['pricing'] ?? []]);
+        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d)]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -280,22 +323,16 @@ if ($action === 'delete') {
     send_json(['ok' => true]);
 }
 if ($action === 'pricing') {
-    $base = filter_var($body['base'] ?? null, FILTER_VALIDATE_INT);
-    if ($base === false || $base < 0 || $base > 200000) err('Zkontrolujte základní cenu.');
-    $rates = $body['rates'] ?? [];
-    if (!is_array($rates) || count($rates) > 80) err('Neplatný ceník.');
-    $clean = [];
-    foreach ($rates as $r) {
-        if (!is_array($r)) err('Neplatná cenová položka.');
-        $start = (string)($r['start'] ?? ''); $end = (string)($r['end'] ?? '');
-        if (!valid_day($start) || !valid_day($end) || $end <= $start) err('Chybný termín ceníku.');
-        $price = filter_var($r['price'] ?? null, FILTER_VALIDATE_INT);
-        $min = filter_var($r['min'] ?? null, FILTER_VALIDATE_INT);
-        if ($price === false || $price < 0 || $price > 200000 || $min === false || $min < 1 || $min > 30) err('Neplatná cena nebo minimální počet nocí.');
-        $clean[] = ['name' => required_text($r['name'] ?? null, 100, 'období'), 'start' => $start, 'end' => $end, 'price' => $price, 'min' => $min];
+    $newPrices = [];
+    foreach (['offShort', 'offWeek', 'extraNight', 'summerWeek'] as $key) {
+        $price = filter_var($body[$key] ?? null, FILTER_VALIDATE_INT);
+        if ($price === false || $price < 1 || $price > 250000) err('Zkontrolujte cenu '.$key.'.');
+        $newPrices[$key] = $price;
     }
-    data_store(function(array &$d, bool &$save) use ($base, $clean) {
-        $d['pricing'] = ['base' => $base, 'rates' => $clean]; $save = true; return true;
+    data_store(function(array &$d, bool &$save) use ($newPrices) {
+        $d['pricing'] = $newPrices;
+        $save = true;
+        return true;
     });
     send_json(['ok' => true]);
 }
