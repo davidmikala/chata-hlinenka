@@ -88,7 +88,7 @@ function overlaps(array $rows, string $start, string $end, ?string $ignore = nul
 // Schválený ceník za celou chatu – balíčky pobytů, nikoli cena za každý den.
 // Staré orientační denní sazby z prototypu se pro výpočet nepoužívají.
 function pricing_values(array $d): array {
-    $defaults = ['offShort' => 20000, 'offWeek' => 28000, 'extraNight' => 5000, 'summerWeek' => 35000];
+    $defaults = ['offShort' => 20000, 'offWeek' => 28000, 'extraNight' => 5000, 'summerShort' => 28000, 'summerWeek' => 35000];
     $custom = $d['pricing'] ?? [];
     if (!is_array($custom)) return $defaults;
     foreach ($defaults as $key => $value) {
@@ -114,7 +114,7 @@ function price_quote(array $d, string $start, string $end): array {
         $seasons[season_for_night($day)] = true;
     }
     $type = count($seasons) === 1 ? array_key_first($seasons) : 'mixed';
-    $minimum = $type === 'summer' || isset($seasons['summer']) ? 7 : 2;
+    $minimum = $type === 'summer' || isset($seasons['summer']) ? 4 : 2;
     $total = null;
     $label = match ($type) {
         'off' => 'Mimo sezónu',
@@ -132,9 +132,15 @@ function price_quote(array $d, string $start, string $end): array {
             $total = $weeks * $p['offWeek'] + min($p['offWeek'], $remaining * $p['extraNight']);
         }
     } elseif ($nights >= $minimum && $type === 'summer') {
-        $weeks = intdiv($nights, 7);
-        $remaining = $nights % 7;
-        $total = $weeks * $p['summerWeek'] + $remaining * $p['extraNight'];
+        if ($nights === 4) {
+            $total = $p['summerShort'];
+        } elseif ($nights <= 7) {
+            $total = $p['summerWeek'];
+        } else {
+            $weeks = intdiv($nights, 7);
+            $remaining = $nights % 7;
+            $total = $weeks * $p['summerWeek'] + $remaining * $p['extraNight'];
+        }
     }
     // Svátky a pobyty zasahující přes více sezón potvrzuje vždy provozovatel.
     return ['nights' => $nights, 'min' => $minimum, 'total' => $total, 'label' => $label, 'type' => $type];
@@ -324,7 +330,7 @@ if ($action === 'delete') {
 }
 if ($action === 'pricing') {
     $newPrices = [];
-    foreach (['offShort', 'offWeek', 'extraNight', 'summerWeek'] as $key) {
+    foreach (['offShort', 'offWeek', 'extraNight', 'summerShort', 'summerWeek'] as $key) {
         $price = filter_var($body[$key] ?? null, FILTER_VALIDATE_INT);
         if ($price === false || $price < 1 || $price > 250000) err('Zkontrolujte cenu '.$key.'.');
         $newPrices[$key] = $price;
