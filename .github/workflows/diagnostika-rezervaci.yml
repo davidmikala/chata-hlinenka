@@ -94,3 +94,25 @@ jobs:
           else
             [[ "$code" == "$EXPECTED" ]]
           fi
+
+  minimal_php:
+    name: "Minimal PHP: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "404", "500", "503", "other"]
+    steps:
+      - name: Otestovat PHP bez session a souboroveho systemu
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/api/probe.php' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and .probe == "minimal-php"' /tmp/answer >/dev/null 2>&1
+          elif [[ "$EXPECTED" == "other" ]]; then
+            [[ ! "$code" =~ ^(200|404|500|503)$ ]]
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
