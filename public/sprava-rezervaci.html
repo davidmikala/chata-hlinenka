@@ -68,10 +68,15 @@ footer{padding:20px;text-align:center;color:#758175;font-size:12px}
   </section>
   <section class="panel">
     <h2>Sezónní ceník pro kalkulaci</h2>
-    <div class="notice">Výchozí ceny z dřívějšího prototypu byly zkušební, proto nejsou automaticky zveřejněny. Zadejte zde skutečné ceny za celou chatu na jednu noc. Při nulové ceně host uvidí „Cena na vyžádání“. Ceník pobytových balíčků na webu zůstává zachován.</div>
-    <label>Základní cena za noc (Kč)<input id="base" type="number" min="0" max="200000" value="0" style="max-width:230px"></label>
-    <div id="rates"></div>
-    <div class="row"><button class="secondary" id="addRate" type="button">+ Přidat období</button><button id="saveRates" type="button">Uložit ceník</button></div>
+    <div class="notice">Schválené ceny jsou za celý pobyt, nikoliv za jednotlivé dny. Mimo sezónu je minimum 2 noci; 2 i 3 noci stojí stejně. Týdenní pobyt má zvýhodněnou cenu, pobyt na 4 až 6 nocí nebude dražší než týden. V červenci a srpnu je minimum 7 nocí. Vánoční a silvestrovské termíny jsou na vyžádání.</div>
+    <div class="grid2">
+      <label>Mimo sezónu, 2–3 noci (Kč)<input id="offShort" type="number" min="1" max="250000" value="20000"></label>
+      <label>Mimo sezónu, 7 nocí (Kč)<input id="offWeek" type="number" min="1" max="250000" value="28000"></label>
+      <label>Další noc (Kč)<input id="extraNight" type="number" min="1" max="250000" value="5000"></label>
+      <label>Letní prázdniny, 7 nocí (Kč)<input id="summerWeek" type="number" min="1" max="250000" value="35000"></label>
+    </div>
+    <p class="muted">Změny cen se projeví pouze v nových poptávkách. Již uložené částky zůstanou zachovány.</p>
+    <p><button id="saveRates" type="button">Uložit schválený ceník</button></p>
   </section>
   <section class="panel">
     <h2>Propojení ubytovacích portálů (iCal)</h2>
@@ -117,22 +122,11 @@ async function refresh(){
        '<div class="row">'+(r.status==='pending'?'<button data-act="approved" data-id="'+escapeHtml(r.id)+'">Schválit</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='approved'?'<button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zrušit termín</button>':'')+
        '<button class="secondary" data-act="delete" data-id="'+escapeHtml(r.id)+'">Smazat záznam</button></div></div>';
     }).join(''):'<p>Zatím nejsou žádné poptávky.</p>';
-    byId('base').value=Number(d.pricing?.base||0);
-    byId('rates').innerHTML='';
-    for(const r of d.pricing?.rates||[])rateRow(r);
+    for (const [key, value] of Object.entries({offShort:20000, offWeek:28000, extraNight:5000, summerWeek:35000})) {
+      byId(key).value=Number(d.pricing?.[key] ?? value);
+    }
   }catch(e){byId('login').classList.remove('hidden');byId('admin').classList.add('hidden');feedback(e.message,true);}
 }
-function rateRow(r={name:'',start:'',end:'',price:0,min:1}){
-  const row=document.createElement('div');row.className='price-row';
-  const inputs=[['Období','name','text'],['Od','start','date'],['Do (odjezd)','end','date'],['Kč/noc','price','number'],['Min. nocí','min','number']];
-  for(const [title,key,type] of inputs){
-    const label=document.createElement('label');label.textContent=title;
-    const input=document.createElement('input');input.type=type;input.dataset.key=key;input.value=r[key]??'';if(type==='number')input.min=key==='min'?'1':'0';
-    label.append(input);row.append(label);
-  }
-  const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Smazat';del.onclick=()=>row.remove();row.append(del);byId('rates').append(row);
-}
-byId('addRate').onclick=()=>rateRow();
 byId('requestCode').onclick=async()=>{
   try{const d=await post('request-code');feedback(d.message);}catch(e){feedback(e.message,true);}
 };
@@ -152,8 +146,11 @@ byId('blockForm').onsubmit=async(e)=>{
 };
 byId('saveRates').onclick=async()=>{
   try{
-    const rates=[...byId('rates').children].map(row=>Object.fromEntries([...row.querySelectorAll('input[data-key]')].map(input=>[input.dataset.key,input.type==='number'?Number(input.value):input.value])));
-    await post('pricing',{base:Number(byId('base').value),rates});feedback('Ceník byl uložen a promítne se do orientačních kalkulací.');await refresh();
+    const prices=Object.fromEntries(['offShort','offWeek','extraNight','summerWeek'].map(key=>[key, Number(byId(key).value)]));
+    if (Object.values(prices).some(n => !Number.isInteger(n) || n < 1)) throw Error('Zkontrolujte ceny pobytů.');
+    await post('pricing',prices);
+    feedback('Schválený ceník uložen. Nové poptávky se budou počítat podle těchto částek.');
+    await refresh();
   }catch(e){feedback(e.message,true);}
 };
 byId('importIcal').onclick=async()=>{
