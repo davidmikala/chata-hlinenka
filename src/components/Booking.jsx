@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import cabinImg from '../assets/photos/chata-vecer.webp';
 import brush from '../assets/figma/brush-booking.svg';
 import { ScrollCue } from './ui.jsx';
@@ -54,11 +54,16 @@ function Month({ offset, fromMonth, today, occupied, start, end, onPick, verifie
           const unavailable = occupied.some((r) => r.start <= day && day < r.end);
           const chosen = start && day >= start && day <= (end || start);
           const past = day < today;
+          // Den příjezdu následujících hostů může být naším odjezdem:
+          // pobyt se počítá do odjezdu, ale noc odjezdu již není obsazená.
+          const canEndHere = Boolean(start && !end && day > start &&
+            !occupied.some((r) => start < r.end && day > r.start));
+          const canPick = verified && !past && (!unavailable || canEndHere);
           const cls = ['hcal__day', !verified ? 'is-unverified' : '', unavailable && verified ? 'is-busy' : '', chosen ? 'is-chosen' : '',
             day === start ? 'is-start' : '', day === end ? 'is-end' : '', day === today ? 'is-today' : '',
             arrival ? 'is-arrival' : '', departure ? 'is-departure' : ''].filter(Boolean).join(' ');
           return (
-            <button key={day} type="button" className={cls} disabled={past || unavailable || !verified}
+            <button key={day} type="button" className={cls} disabled={!canPick}
               onClick={() => onPick(day)} aria-label={dateCZ(day) + (!verified ? ' obsazenost neověřena' : unavailable ? ' obsazeno' : ' dostupné k poptávce')}
               title={!verified ? 'Obsazenost se ověřuje' : unavailable ? 'Obsazeno' : dateCZ(day)}>
               {Number(day.slice(-2))}
@@ -83,6 +88,7 @@ export default function Booking() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const nameInputRef = useRef(null);
   const currentQuote = quote(pricing, start, end);
   const conflict = Boolean(start && end && occupied.some((r) => start < r.end && end > r.start));
   const validDates = loaded && currentQuote && currentQuote.nights >= currentQuote.min && !conflict && start >= today;
@@ -121,6 +127,9 @@ export default function Booking() {
       setFeedback({ ok: false, text: 'Vybraný pobyt zasahuje do obsazeného termínu.' });
     } else {
       setEnd(day);
+      // Po označení odjezdu jsou obě data již ve formuláři.
+      // Přejít rovnou na vyplnění jména stejně jako v původním vzoru.
+      nameInputRef.current?.focus();
     }
   };
   const onStart = (v) => { setStart(v); if (end && end <= v) setEnd(''); setFeedback(null); };
@@ -184,7 +193,12 @@ export default function Booking() {
               <span><i className="hcal__swatch is-busy" /> Obsazeno</span>
               <span><i className="hcal__swatch is-selected" /> Váš termín</span>
             </div>
-            <p className="booking__hint">{loaded ? 'Klikněte na datum příjezdu a poté na datum odjezdu. Dostupnost vám následně potvrdíme.' : 'Výběr termínů bude aktivní po načtení ověřené obsazenosti.'}</p>
+            <p className="booking__hint booking__selection" role="status">
+              {!loaded ? 'Výběr termínů bude aktivní po načtení ověřené obsazenosti.'
+                : !start ? 'Klikněte na zelený den příjezdu a poté na den odjezdu.'
+                  : !end ? `Příjezd ${dateCZ(start)}. Nyní vyberte datum odjezdu.`
+                    : `Vybráno: ${dateCZ(start)} – ${dateCZ(end)} · ${currentQuote?.nights ?? 0} nocí. Termín se vyplnil do formuláře.`}
+            </p>
           </div>
           <div className="booking__request-box">
             <figure className="booking__image"><img src={cabinImg} alt="Chata Hliněnka v podvečer" loading="lazy" /></figure>
@@ -200,7 +214,7 @@ export default function Booking() {
                 <label>Odjezd <input required type="date" min={start || today} value={end} onChange={(e) => { setEnd(e.target.value); setFeedback(null); }} /></label>
               </div>
               <div className="booking__input-row">
-                <label>Jméno a příjmení <input required autoComplete="name" maxLength={100} value={form.name} onChange={(e) => onChange('name', e.target.value)} placeholder="Jméno a příjmení" /></label>
+                <label>Jméno a příjmení <input ref={nameInputRef} required autoComplete="name" maxLength={100} value={form.name} onChange={(e) => onChange('name', e.target.value)} placeholder="Jméno a příjmení" /></label>
                 <label>Počet osob <input required type="number" min={1} max={12} value={people} onChange={(e) => setPeople(Number(e.target.value))} /></label>
               </div>
               <div className="booking__input-row">
