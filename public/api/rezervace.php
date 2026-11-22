@@ -310,7 +310,8 @@ if ($method === 'GET') {
         require_admin();
         $d = data_store(fn(array &$d, bool &$save) => $d);
         unset($d['otp'], $d['last_code_at'], $d['ip_times']);
-        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d)]);
+        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d),
+            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name()]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -361,9 +362,21 @@ if ($action === 'inquiry') {
         . "Orientační cena: ".($r['price'] === null ? 'Na vyžádání' : number_format($r['price'], 0, ',', ' ').' Kč')
         . "\nPoznámka: $message\n\nČeká na schválení. Správa: https://www.chatahlinenka.cz/sprava-rezervaci.html";
     $notified = send_mail_text(OWNER_MAIL, 'Nová poptávka ubytování – Chata Hliněnka', $text, $email);
-    send_json(['ok' => true, 'notified' => $notified, 'message' => $notified
-        ? 'Poptávka byla přijata. Ozveme se po jejím posouzení.'
-        : 'Poptávka je uložená, ale e-mailové upozornění se nepodařilo odeslat. Pro jistotu nás kontaktujte telefonicky.']);
+    // Stav odeslani ulozit k rezervaci – i pri selhani emailu se zaznam neztrati.
+    data_store(function(array &$d, bool &$save) use ($r, $notified) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $r['id']) continue;
+            $record['emailNoticeStatus'] = $notified ? 'accepted' : 'failed';
+            $record['emailNoticeAt'] = date(DATE_ATOM);
+            $save = true;
+            break;
+        }
+        return null;
+    });
+    send_json(['ok' => true, 'saved' => true, 'notified' => $notified,
+        'message' => $notified
+        ? 'Poptávka byla bezpečně uložena. Upozornění jsme předali poštovní službě, ale doručení e-mailu nelze automaticky potvrdit.'
+        : 'Poptávka byla uložena do správy rezervací, ale upozornění e-mailem se nepodařilo odeslat. Prosíme, kontaktujte nás také telefonicky.']);
 }
 if ($action === 'request-code') {
     // Přihlášení jen kódem doručeným provozovateli, žádné veřejné heslo.
@@ -398,6 +411,36 @@ if ($action === 'logout') {
 }
 require_admin();
 
+if ($action === 'retry-inquiry-notice') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $r = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['records'] ?? [] as $item) if (($item['id'] ?? '') === $id) return $item;
+        return null;
+    });
+    if (!$r || ($r['source'] ?? '') !== 'Web') err('Webova poptavka nebyla nalezena.', 404);
+    $name = (string)($r['name'] ?? '');
+    $email = (string)($r['email'] ?? '');
+    $text = "Znovu zaslane upozorneni na poptavku Chaty Hlinenka\n\n"
+        ."Jmeno: ".$name."\nE-mail: ".$email."\nTelefon: ".($r['phone'] ?? '')
+        ."\nPocet hostu: ".($r['people'] ?? '')
+        ."\nTermin: ".$r['start']." az ".$r['end']
+        ."\nCena: ".($r['price'] === null ? 'Na vyzadani' : number_format((int)$r['price'], 0, ',', ' ').' Kc')
+        ."\nPoznamka: ".($r['message'] ?? '')
+        ."\n\nSprava: https://www.chatahlinenka.cz/sprava-rezervaci.html";
+    $sent = send_mail_text(OWNER_MAIL, 'Upozorneni na poptavku – Chata Hlinenka', $text,
+        filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null);
+    data_store(function(array &$d, bool &$save) use ($id, $sent) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $id) continue;
+            $record['emailNoticeStatus'] = $sent ? 'accepted' : 'failed';
+            $record['emailNoticeAt'] = date(DATE_ATOM);
+            $save = true;
+            break;
+        }
+        return null;
+    });
+    send_json(['ok' => true, 'notified' => $sent]);
+}
 if ($action === 'decision') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $status = (string)($body['status'] ?? '');
