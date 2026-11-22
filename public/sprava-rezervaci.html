@@ -54,7 +54,7 @@ footer{padding:20px;text-align:center;color:#758175;font-size:12px}
     <button class="secondary" id="logout">Odhlásit</button>
   </div>
   <div class="kpis" id="kpis"></div>
-  <section class="panel"><h2>Poptávky a rezervace</h2><div id="records"></div></section>
+  <section class="panel"><h2>Poptávky a rezervace</h2><p class="notice" id="mailStatus">Kontroluji nastavení e-mailových upozornění…</p><div id="records"></div></section>
   <section class="panel">
     <h2>Ruční blokace termínu</h2>
     <form id="blockForm">
@@ -114,13 +114,18 @@ async function refresh(){
     byId('login').classList.add('hidden');byId('admin').classList.remove('hidden');
     byId('icalUrl').value=location.origin+'/api/rezervace.php?action=ical';
     const records=d.records||[];
+    byId('mailStatus').textContent='Příjemce upozornění: '+(d.notificationRecipient||'david@mikala.cz')
+      +' · Způsob odeslání: '+(d.mailTransport==='smtp'?'Ověřené SMTP':'PHP mail (doručení nemusí být spolehlivé)')
+      +'. Stav níže ukazuje pouze předání poštovní službě, nikoliv potvrzené doručení.';
     byId('kpis').innerHTML=[['Čeká na schválení','pending'],['Potvrzeno','approved'],['Zamítnuto','rejected']].map(([label,status])=>'<div class="kpi">'+label+'<b>'+records.filter(r=>r.status===status).length+'</b></div>').join('');
     byId('records').innerHTML=records.length ? [...records].reverse().map(r=>{
       const status=({pending:'Čeká',approved:'Potvrzeno',rejected:'Zamítnuto'})[r.status]||r.status;
       return '<div class="record"><div class="top"><strong>'+escapeHtml(r.name)+'</strong><span class="status '+escapeHtml(r.status)+'">'+escapeHtml(status)+'</span></div>'+
        '<p>'+pretty(r.start)+' – '+pretty(r.end)+' · '+escapeHtml(r.people??'')+' osob · '+escapeHtml(r.source??'')+'</p>'+
        '<p>'+escapeHtml(r.email??'')+' '+escapeHtml(r.phone??'')+'</p><p>'+money(r.price)+' · '+escapeHtml(r.message??'')+'</p>'+
+       (r.source==='Web'?'<p><b>Upozornění e-mailem: '+(r.emailNoticeStatus==='accepted'?'Předáno poštovní službě (doručení neověřeno)':r.emailNoticeStatus==='failed'?'Odeslání selhalo':'Bez potvrzeného odeslání')+'</b></p>':'')+
        '<div class="row">'+(r.status==='pending'?'<button data-act="approved" data-id="'+escapeHtml(r.id)+'">Schválit</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='approved'?'<button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zrušit termín</button>':'')+
+       (r.source==='Web'?'<button class="secondary" data-act="retry" data-id="'+escapeHtml(r.id)+'">Znovu poslat upozornění</button>':'')+
        '<button class="secondary" data-act="delete" data-id="'+escapeHtml(r.id)+'">Smazat záznam</button></div></div>';
     }).join(''):'<p>Zatím nejsou žádné poptávky.</p>';
     for (const [key, value] of Object.entries({offShort:20000, offWeek:28000, extraNight:5000, summerShort:28000, summerWeek:35000})) {
@@ -140,7 +145,17 @@ byId('records').onclick=async(e)=>{
   const id=button.dataset.id,act=button.dataset.act;
   if(act==='delete'&&!confirm('Opravdu odstranit tento záznam?'))return;
   if(act==='rejected'&&!confirm('Opravdu zrušit/zamítnout termín?'))return;
-  try{const d=await post(act==='delete'?'delete':'decision',act==='delete'?{id}:{id,status:act});feedback(d.notified===false?'Změna uložena, ale potvrzovací e-mail se nepodařilo odeslat.':'Změna uložena.');await refresh();}catch(e){feedback(e.message,true);}
+  if(act==='retry'&&!confirm('Znovu odeslat upozornění na david@mikala.cz?'))return;
+  try{
+    if(act==='retry'){
+      const d=await post('retry-inquiry-notice',{id});
+      feedback(d.notified===false?'Poštovní služba upozornění nepřijala. Ověřte SMTP a záznam poptávky.':'Upozornění předáno poštovní službě, doručení není potvrzené.',d.notified===false);
+    }else{
+      const d=await post(act==='delete'?'delete':'decision',act==='delete'?{id}:{id,status:act});
+      feedback(d.notified===false?'Změna uložena, ale potvrzovací e-mail se nepodařilo odeslat.':'Změna uložena.');
+    }
+    await refresh();
+  }catch(e){feedback(e.message,true);}
 };
 byId('blockForm').onsubmit=async(e)=>{
   e.preventDefault();try{await post('block',{start:byId('bs').value,end:byId('be').value,name:byId('bn').value});e.target.reset();feedback('Termín je zablokovaný.');await refresh();}catch(e){feedback(e.message,true);}
