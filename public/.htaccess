@@ -1,0 +1,6 @@
+Options -Indexes
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://chatahlinenka.cz%{REQUEST_URI} [R=302,L]
+RewriteRule ^preview\.php$ - [L]
+RewriteRule ^ preview.php [L]
