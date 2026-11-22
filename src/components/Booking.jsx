@@ -36,7 +36,7 @@ function quote(pricing, start, end) {
   return { nights, min, total: complete ? total : null, groups: [...group.values()] };
 }
 
-function Month({ offset, fromMonth, today, occupied, start, end, onPick }) {
+function Month({ offset, fromMonth, today, occupied, start, end, onPick, verified }) {
   const date = new Date(fromMonth.getFullYear(), fromMonth.getMonth() + offset, 1);
   const y = date.getFullYear(), m = date.getMonth();
   const blanks = (date.getDay() + 6) % 7;
@@ -54,13 +54,13 @@ function Month({ offset, fromMonth, today, occupied, start, end, onPick }) {
           const unavailable = occupied.some((r) => r.start <= day && day < r.end);
           const chosen = start && day >= start && day <= (end || start);
           const past = day < today;
-          const cls = ['hcal__day', unavailable ? 'is-busy' : '', chosen ? 'is-chosen' : '',
+          const cls = ['hcal__day', !verified ? 'is-unverified' : '', unavailable && verified ? 'is-busy' : '', chosen ? 'is-chosen' : '',
             day === start ? 'is-start' : '', day === end ? 'is-end' : '', day === today ? 'is-today' : '',
             arrival ? 'is-arrival' : '', departure ? 'is-departure' : ''].filter(Boolean).join(' ');
           return (
-            <button key={day} type="button" className={cls} disabled={past || unavailable}
-              onClick={() => onPick(day)} aria-label={dateCZ(day) + (unavailable ? ' obsazeno' : ' dostupné k poptávce')}
-              title={unavailable ? 'Obsazeno' : dateCZ(day)}>
+            <button key={day} type="button" className={cls} disabled={past || unavailable || !verified}
+              onClick={() => onPick(day)} aria-label={dateCZ(day) + (!verified ? ' obsazenost neověřena' : unavailable ? ' obsazeno' : ' dostupné k poptávce')}
+              title={!verified ? 'Obsazenost se ověřuje' : unavailable ? 'Obsazeno' : dateCZ(day)}>
               {Number(day.slice(-2))}
             </button>
           );
@@ -89,16 +89,27 @@ export default function Booking() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(API + '?action=calendar', { cache: 'no-store', signal: controller.signal })
-      .then(async (r) => {
+    // Kalendáře se vykreslují vždy. Obsazenost pravidelně ověřujeme na serveru;
+    // krátká nedostupnost nesmí skrýt celé dva měsíce.
+    const refresh = async () => {
+      try {
+        const r = await fetch(API + '?action=calendar', { cache: 'no-store', signal: controller.signal });
         const d = await r.json();
-        if (!r.ok || !d.ok) throw new Error(d.message || 'Kalendář je nedostupný.');
-        setOccupied(Array.isArray(d.occupied) ? d.occupied : []);
+        if (!r.ok || !d.ok || !Array.isArray(d.occupied)) throw new Error(d.message || 'Kalendář je nedostupný.');
+        if (controller.signal.aborted) return;
+        setOccupied(d.occupied);
         setPricing(d.pricing || { base: 0, rates: [] });
         setLoaded(true);
-      })
-      .catch((e) => { if (e.name !== 'AbortError') setLoadError('Obsazenost teď nelze ověřit. Poptávku nám můžete sdělit telefonicky nebo e-mailem.'); });
-    return () => controller.abort();
+        setLoadError('');
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setLoaded(false);
+        setLoadError('Obsazenost momentálně nelze ověřit. Kalendáře jsou zobrazené, ale termíny teď nejsou potvrzené. Zkuste to znovu za chvíli.');
+      }
+    };
+    refresh();
+    const refreshInterval = setInterval(refresh, 30000);
+    return () => { clearInterval(refreshInterval); controller.abort(); };
   }, []);
 
   const pick = (day) => {
@@ -162,18 +173,18 @@ export default function Booking() {
                 <button type="button" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))} aria-label="Další měsíc">›</button>
               </div>
             </div>
-            {loadError ? <p className="booking__alert">{loadError}</p> : !loaded ? <p className="booking__hint">Načítám obsazenost…</p> : (
-              <div className="hcal__months">
-                <Month offset={0} fromMonth={month} today={today} occupied={occupied} start={start} end={end} onPick={pick} />
-                <Month offset={1} fromMonth={month} today={today} occupied={occupied} start={start} end={end} onPick={pick} />
-              </div>
-            )}
+            {loadError && <p className="booking__alert" role="status">{loadError}</p>}
+            {!loaded && !loadError && <p className="booking__hint" role="status">Ověřuji obsazené termíny…</p>}
+            <div className="hcal__months" aria-label="Dva měsíce kalendáře obsazenosti">
+              <Month offset={0} fromMonth={month} today={today} occupied={occupied} start={start} end={end} onPick={pick} verified={loaded} />
+              <Month offset={1} fromMonth={month} today={today} occupied={occupied} start={start} end={end} onPick={pick} verified={loaded} />
+            </div>
             <div className="hcal__legend">
-              <span><i className="hcal__swatch is-free" /> K poptání</span>
+              <span><i className="hcal__swatch is-free" /> {loaded ? 'K poptání' : 'Dostupnost neověřena'}</span>
               <span><i className="hcal__swatch is-busy" /> Obsazeno</span>
               <span><i className="hcal__swatch is-selected" /> Váš termín</span>
             </div>
-            <p className="booking__hint">Klikněte na datum příjezdu a poté na datum odjezdu. Volná data jsou informativní a jejich dostupnost ještě potvrdíme.</p>
+            <p className="booking__hint">{loaded ? 'Klikněte na datum příjezdu a poté na datum odjezdu. Dostupnost vám následně potvrdíme.' : 'Výběr termínů bude aktivní po načtení ověřené obsazenosti.'}</p>
           </div>
           <div className="booking__request-box">
             <figure className="booking__image"><img src={cabinImg} alt="Chata Hliněnka v podvečer" loading="lazy" /></figure>
