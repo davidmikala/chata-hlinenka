@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import droneImg from '../assets/figma/drone.webp';
+import droneImg from '../assets/photos/chata-ohniste.webp';
 import { SectionHead } from './ui.jsx';
 import './Location.css';
 

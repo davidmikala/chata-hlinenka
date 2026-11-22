@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import heroImg from '../assets/figma/drone.webp';
+import heroImg from '../assets/photos/chata-ohniste.webp';
 import { ReserveButton, ScrollCue } from './ui.jsx';
 import './Hero.css';
 
