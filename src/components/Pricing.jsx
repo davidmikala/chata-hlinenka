@@ -96,7 +96,7 @@ export default function Pricing() {
               <span>Platba převodem 2 dny před příjezdem, vrácení do 5 dnů po odjezdu dle podmínek ubytování.</span>
             </div>
           </div>
-          <ReserveButton variant="dark" size="sm" href="#kontakt" className="pricing__ask">
+          <ReserveButton variant="dark" size="sm" href="#rezervace" className="pricing__ask">
             Zeptat se na termín
           </ReserveButton>
         </div>
