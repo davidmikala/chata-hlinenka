@@ -48,3 +48,29 @@ jobs:
           else
             [[ "$code" == "$EXPECTED" ]]
           fi
+
+  response_reason:
+    name: "503 reason: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["folder", "file", "lock", "html", "other"]
+    steps:
+      - name: Otestovat bezpecne kterou zpravu server vraci
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          curl -sS -L --max-time 20 -o /tmp/answer 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar'
+          if [[ "$EXPECTED" == "folder" ]]; then
+            grep -Fq 'Uložiště rezervací není na hostingu přístupné' /tmp/answer
+          elif [[ "$EXPECTED" == "file" ]]; then
+            grep -Fq 'Rezervační systém není připraven k ukládání' /tmp/answer
+          elif [[ "$EXPECTED" == "lock" ]]; then
+            grep -Fq 'Uložiště je dočasně nedostupné' /tmp/answer
+          elif [[ "$EXPECTED" == "html" ]]; then
+            grep -Eiq '<!doctype|<html' /tmp/answer
+          else
+            ! grep -Eq '(Uložiště rezervací není na hostingu přístupné|Rezervační systém není připraven k ukládání|Uložiště je dočasně nedostupné|<!doctype|<html)' /tmp/answer
+          fi
