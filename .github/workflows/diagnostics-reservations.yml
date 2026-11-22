@@ -1,0 +1,22 @@
+name: Diagnostika weboveho kalendare
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "00 – Domovska stranka odpovida"
+        run: curl --fail --silent --show-error --location --max-time 15 --output /dev/null https://www.chatahlinenka.cz/
+        continue-on-error: true
+      - name: "01 – PHP URL odpovida HTTP 200"
+        run: curl --fail --silent --show-error --location --max-time 15 --output /tmp/hlinenka-calendar.json 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar'
+        continue-on-error: true
+      - name: "02 – Kalendari vraci platny JSON"
+        run: curl --silent --show-error --location --max-time 15 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar' | jq -e type==\"object\"
+        continue-on-error: true
+      - name: "03 – API hlasi ok true"
+        run: curl --silent --show-error --location --max-time 15 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar' | jq -e '.ok == true'
+        continue-on-error: true
