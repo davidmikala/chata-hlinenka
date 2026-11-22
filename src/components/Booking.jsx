@@ -12,28 +12,50 @@ const dateDiff = (a, b) => (Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:0
 const currency = (n) => Number(n).toLocaleString('cs-CZ') + ' Kč';
 const WEEKDAYS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
+const APPROVED_PRICING = { offShort: 20000, offWeek: 28000, extraNight: 5000, summerWeek: 35000 };
+
+function seasonForNight(iso) {
+  const md = iso.slice(5);
+  if (md >= '12-22' || md < '01-03') return 'holiday';
+  if (md >= '07-01' && md < '09-01') return 'summer';
+  return 'off';
+}
+
+// Balíčky podle schváleného ceníku. Nezobrazovat ceny za jednotlivé dny.
+// Stejná pravidla používá PHP při ukládání skutečné poptávky.
 function quote(pricing, start, end) {
   if (!start || !end || end <= start) return null;
   const nights = dateDiff(start, end);
   if (!Number.isInteger(nights) || nights < 1 || nights > 60) return null;
-  let total = 0;
-  let complete = true;
-  let min = 1;
-  const group = new Map();
+  const p = { ...APPROVED_PRICING, ...pricing };
+  const seasons = new Set();
   for (let i = 0; i < nights; i++) {
     const day = new Date(Date.parse(start + 'T12:00:00Z') + i * 86400000).toISOString().slice(0, 10);
-    let tariff = { name: 'Běžná sazba', price: Number(pricing.base) || 0, min: 1 };
-    for (const r of pricing.rates || []) if (r.start <= day && day < r.end) tariff = r;
-    const price = Number(tariff.price) || 0;
-    if (price <= 0) complete = false;
-    total += price;
-    min = Math.max(min, Number(tariff.min) || 1);
-    const key = tariff.name + '|' + price;
-    const old = group.get(key) || { name: tariff.name, price, count: 0 };
-    old.count += 1;
-    group.set(key, old);
+    seasons.add(seasonForNight(day));
   }
-  return { nights, min, total: complete ? total : null, groups: [...group.values()] };
+  const type = seasons.size === 1 ? [...seasons][0] : 'mixed';
+  const min = seasons.has('summer') ? 7 : 2;
+  const label = {
+    off: 'Mimo sezónu',
+    summer: 'Letní prázdniny',
+    holiday: 'Vánoce a Silvestr',
+    mixed: 'Pobyt přes různá období',
+  }[type];
+  let total = null;
+  if (nights >= min && type === 'off') {
+    if (nights <= 7) {
+      total = Math.min(p.offWeek, p.offShort + Math.max(0, nights - 3) * p.extraNight);
+    } else {
+      const weeks = Math.floor(nights / 7);
+      const rest = nights % 7;
+      total = weeks * p.offWeek + Math.min(p.offWeek, rest * p.extraNight);
+    }
+  } else if (nights >= min && type === 'summer') {
+    const weeks = Math.floor(nights / 7);
+    const rest = nights % 7;
+    total = weeks * p.summerWeek + rest * p.extraNight;
+  }
+  return { nights, min, total, type, label };
 }
 
 function Month({ offset, fromMonth, today, occupied, start, end, onPick, verified }) {
@@ -79,7 +101,7 @@ export default function Booking() {
   const today = useMemo(() => toISO(new Date()), []);
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [occupied, setOccupied] = useState([]);
-  const [pricing, setPricing] = useState({ base: 0, rates: [] });
+  const [pricing, setPricing] = useState(APPROVED_PRICING);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [start, setStart] = useState('');
@@ -104,7 +126,7 @@ export default function Booking() {
         if (!r.ok || !d.ok || !Array.isArray(d.occupied)) throw new Error(d.message || 'Kalendář je nedostupný.');
         if (controller.signal.aborted) return;
         setOccupied(d.occupied);
-        setPricing(d.pricing || { base: 0, rates: [] });
+        setPricing(d.pricing || APPROVED_PRICING);
         setLoaded(true);
         setLoadError('');
       } catch (e) {
@@ -226,10 +248,10 @@ export default function Booking() {
               <div className="booking__quote" aria-live="polite">
                 {currentQuote ? (
                   <>
-                    <span>{dateCZ(start)} – {dateCZ(end)} · {currentQuote.nights} nocí</span>
+                    <span>{currentQuote.label} · {dateCZ(start)} – {dateCZ(end)} · {currentQuote.nights} nocí</span>
                     <strong>{currentQuote.total !== null ? currency(currentQuote.total) : 'Cena na vyžádání'}</strong>
-                    {currentQuote.nights < currentQuote.min && <span className="booking__invalid">Minimální délka: {currentQuote.min} nocí.</span>}
-                    <small>Orientační částku upřesníme při potvrzení podle platného ceníku. Vratná kauce 5 000 Kč není součástí ceny.</small>
+                    {currentQuote.nights < currentQuote.min && <span className="booking__invalid">Minimální délka pobytu: {currentQuote.min} nocí.</span>}
+                    <small>Cena dle schváleného ceníku za celý pobyt. Termín i konečnou cenu potvrdíme osobně. Vratná kauce 5 000 Kč není součástí ceny.</small>
                   </>
                 ) : <span>Vyberte termín pro orientační kalkulaci pobytu.</span>}
               </div>
