@@ -1,0 +1,36 @@
+name: Hlinenka - sestaveni webu
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Nacist zdrojove soubory
+        uses: actions/checkout@v4
+
+      - name: Nastavit Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalovat zavislosti
+        run: npm ci
+
+      - name: Sestavit stranky
+        run: npm run build
+
+      - name: Ulozit sestaveny web
+        uses: actions/upload-artifact@v4
+        with:
+          name: hlinenka-web-dist
+          path: dist/
+          if-no-files-found: error
