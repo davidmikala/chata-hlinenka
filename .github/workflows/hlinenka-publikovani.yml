@@ -1,19 +1,18 @@
-name: Hlinenka - sestaveni webu
+
+name: Hlinenka - test publikovani
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Nacist zdrojove soubory
+      - name: Nacist projekt
         uses: actions/checkout@v4
 
       - name: Nastavit Node.js
@@ -25,12 +24,17 @@ jobs:
       - name: Instalovat zavislosti
         run: npm ci
 
-      - name: Sestavit stranky
+      - name: Sestavit web
         run: npm run build
 
-      - name: Ulozit sestaveny web
-        uses: actions/upload-artifact@v4
+      - name: Test pripojeni k Webglobe
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          name: hlinenka-web-dist
-          path: dist/
-          if-no-files-found: error
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./dist/
+          server-dir: ./public_html/
+          dry-run: true
