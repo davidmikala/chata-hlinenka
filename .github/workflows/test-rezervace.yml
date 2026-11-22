@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           base='http://127.0.0.1:8765/api/rezervace.php'
-          curl -fsS "$base?action=calendar" | jq -e '.pricing.offShort == 20000 and .pricing.offWeek == 28000 and .pricing.extraNight == 5000 and .pricing.summerWeek == 35000'
+          curl -fsS "$base?action=calendar" | jq -e '.pricing.offShort == 20000 and .pricing.offWeek == 28000 and .pricing.extraNight == 5000 and .pricing.summerShort == 28000 and .pricing.summerWeek == 35000'
           check_price() {
             local start="$1" end="$2" price="$3" min="$4"
             curl -fsS "$base?action=quote&start=$start&end=$end" |
@@ -68,7 +68,28 @@ jobs:
           check_price 2027-04-09 2027-04-14 28000 2
           check_price 2027-04-09 2027-04-16 28000 2
           check_price 2027-04-09 2027-04-10 null 2
-          check_price 2027-07-03 2027-07-10 35000 7
-          check_price 2027-07-03 2027-07-09 null 7
+          check_price 2027-07-03 2027-07-07 28000 4
+          check_price 2027-07-03 2027-07-08 35000 4
+          check_price 2027-07-03 2027-07-09 35000 4
+          check_price 2027-07-03 2027-07-10 35000 4
+          check_price 2027-07-03 2027-07-06 null 4
           check_price 2027-12-24 2027-12-27 null 2
-          check_price 2027-06-30 2027-07-07 null 7
+          check_price 2027-06-30 2027-07-07 null 4
+
+
+      - name: Ověřit nový turistický podklad a e-mailová upozornění v kódu
+        shell: bash
+        run: |
+          grep -Fq 'frame.mapy.cz/turisticka?x=17.6217614' src/components/ContactMap.jsx
+          grep -Fq 'mapset=outdoor' src/components/ContactMap.jsx
+          grep -Fq "OWNER_MAIL = 'david@mikala.cz'" public/api/rezervace.php
+          grep -Fq 'retry-inquiry-notice' public/api/rezervace.php
+          grep -Fq "smtp-config.php" public/api/rezervace.php
+      - name: Ověřit stav veřejného mapového rámce Mapy.com
+        continue-on-error: true
+        shell: bash
+        run: |
+          url='https://frame.mapy.cz/turisticka?x=17.6217614&y=49.3711206&z=15'
+          code=$(curl -L -sS --connect-timeout 15 --max-time 25 -D /tmp/maphdr -o /tmp/mapbody -w '%{http_code}' "$url" || echo "000")
+          echo "::notice title=Mapy.com embed::HTTP status: ${code}"
+          test "$code" = 200
