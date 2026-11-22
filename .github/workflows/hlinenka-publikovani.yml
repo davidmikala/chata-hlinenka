@@ -2,6 +2,8 @@
 name: Hlinenka - test publikovani
 
 on:
+push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -37,4 +39,4 @@ jobs:
           port: 21
           local-dir: ./dist/
           server-dir: ./public_html/
-          dry-run: true
+          
