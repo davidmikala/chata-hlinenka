@@ -31,7 +31,7 @@ export default function Header() {
   // zvýraznění aktivní položky menu podle sekce ve viewportu
   useEffect(() => {
     // sekce, které nemají vlastní položku v menu, patří pod „O chatě“
-    const ALIAS = { pribeh: 'o-chate', 'proc-hlinenka': 'o-chate', poloha: 'o-chate', stodola: 'o-chate', recenze: 'rezervace' };
+    const ALIAS = { pribeh: 'o-chate', 'proc-hlinenka': 'o-chate', poloha: 'o-chate', stodola: 'o-chate' };
     const navIds = new Set(ALL.map((l) => l.href.slice(1)));
     const sections = [...document.querySelectorAll('main > section[id]')];
     let raf = 0;

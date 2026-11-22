@@ -12,7 +12,6 @@ import Equipment from './components/Equipment.jsx';
 import Trips from './components/Trips.jsx';
 import Pricing from './components/Pricing.jsx';
 import Booking from './components/Booking.jsx';
-import Reviews from './components/Reviews.jsx';
 import MapSection from './components/MapSection.jsx';
 import Footer from './components/Footer.jsx';
 import ScrollProgress from './components/ScrollProgress.jsx';
@@ -37,7 +36,6 @@ export default function App() {
         <Trips />
         <Pricing />
         <Booking />
-        <Reviews />
         <MapSection />
       </main>
       <Footer />
