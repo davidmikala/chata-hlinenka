@@ -1,2 +1,6 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /api/
+Disallow: /sprava-rezervaci.html
+
+Sitemap: https://www.chatahlinenka.cz/sitemap.xml
