@@ -1,7 +1,7 @@
-import barnImg from '../assets/photos/stodola-interier.webp';
+import barnImg from '../assets/photos/stodola-interier-uprav.jpg';
 import tableImg from '../assets/photos/stodola-stul.webp';
 import kitchenImg from '../assets/photos/stodola-kuchynka.webp';
-import dartsImg from '../assets/photos/stodola-sipky.webp';
+import dartsImg from '../assets/photos/stodola-sipky-uprav.jpg';
 import { SectionHead, ReserveButton, ScrollCue } from './ui.jsx';
 import './Barn.css';
 
