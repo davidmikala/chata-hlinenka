@@ -55,7 +55,7 @@ export default function Footer() {
           <nav className="footer__col" aria-label="Navigace v patičce" data-reveal style={{ '--d': '200ms' }}>
             <h3>Navigace</h3>
             {NAV.map((l) => (
-              <a key={l.href} href={l.href} className="footer__link">
+              <a key={l.href} href={"/" + l.href} className="footer__link">
                 {l.label}
               </a>
             ))}
@@ -82,10 +82,13 @@ export default function Footer() {
             <a href="#gdpr" className="footer__link">
               GDPR
             </a>
-            <a href="#rezervace" className="footer__link">
+            <a href="/#rezervace" className="footer__link">
               Náš rezervační systém
             </a>
-            <a href="#top" className="footer__top" aria-label="Zpět nahoru">
+            <a href="/vseobecne-obchodni-podminky/" className="footer__link">
+              Obchodní podmínky
+            </a>
+            <a href="/#top" className="footer__top" aria-label="Zpět nahoru">
               <img src={arrowUp} alt="" width="18" height="18" />
             </a>
           </div>

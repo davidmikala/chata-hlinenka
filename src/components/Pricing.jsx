@@ -100,6 +100,10 @@ export default function Pricing() {
             Zeptat se na termín
           </ReserveButton>
         </div>
+        <p className="pricing__terms-note">
+          Pobyt je bez domácích zvířat a všechny budovy včetně stodoly jsou nekuřácké.
+          Před rezervací doporučujeme přečíst si <a href="/vseobecne-obchodni-podminky/">všeobecné obchodní a ubytovací podmínky</a>.
+        </p>
       </div>
     </section>
   );

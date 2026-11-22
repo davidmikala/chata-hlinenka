@@ -74,7 +74,7 @@ export default function Header() {
 
   const navLink = (l) => (
     <li key={l.href}>
-      <a href={l.href} className={`nav__link ${active === l.href ? 'is-active' : ''}`}>
+      <a href={'/' + l.href} className={`nav__link ${active === l.href ? 'is-active' : ''}`}>
         {l.label}
       </a>
     </li>
@@ -86,17 +86,17 @@ export default function Header() {
       <div className="site-header__inner">
         <nav className="nav nav--desktop" aria-label="Hlavní navigace">
           <ul className="nav__list">{LEFT.map(navLink)}</ul>
-          <a href="#top" className="site-header__logo" aria-label="Chata Hliněnka – úvod">
+          <a href="/#top" className="site-header__logo" aria-label="Chata Hliněnka – úvod">
             <img src={logo} alt="Chata Hliněnka" width="130" height="130" />
           </a>
           <div className="nav__right">
             <ul className="nav__list">{RIGHT.map(navLink)}</ul>
-            <ReserveButton size="md" className="site-header__cta" />
+            <ReserveButton size="md" href="/#rezervace" className="site-header__cta" />
           </div>
         </nav>
 
         {/* mobilní lišta */}
-        <a href="#top" className="site-header__logo site-header__logo--mobile" aria-label="Chata Hliněnka – úvod">
+        <a href="/#top" className="site-header__logo site-header__logo--mobile" aria-label="Chata Hliněnka – úvod">
           <img src={logo} alt="Chata Hliněnka" width="64" height="64" />
         </a>
         <button
@@ -120,7 +120,7 @@ export default function Header() {
           <ul className="mobile-menu__list">
             {ALL.map((l, i) => (
               <li key={l.href} style={{ '--i': i }}>
-                <a href={l.href} tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
+                <a href={'/' + l.href} tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
                   <span className="mobile-menu__num">0{i + 1}</span>
                   {l.label}
                 </a>

@@ -179,6 +179,10 @@ export default function Booking() {
             <figure className="booking__image"><img src={cabinImg} alt="Chata Hliněnka v podvečer" loading="lazy" /></figure>
             <h3>Poptávka ubytování</h3>
             <p>Odesláním poptávky nevzniká závazná rezervace. Termín zablokujeme až po našem potvrzení.</p>
+            <div className="booking__rules" aria-label="Pravidla ubytování">
+              <p><strong>Bez domácích zvířat</strong> – vstup do areálu není povolen.</p>
+              <p><strong>Nekuřácké ubytování</strong> – zákaz kouření ve všech budovách včetně stodoly.</p>
+            </div>
             <form onSubmit={submit} className="booking__request-form">
               <div className="booking__input-row">
                 <label>Příjezd <input required type="date" min={today} value={start} onChange={(e) => onStart(e.target.value)} /></label>
@@ -206,6 +210,7 @@ export default function Booking() {
               </div>
               {conflict && <p className="booking__invalid">Tento termín zasahuje do obsazenosti.</p>}
               {feedback && <p className={feedback.ok ? 'booking__success' : 'booking__alert'} role="status">{feedback.text}</p>}
+              <p className="booking__terms-note">Před odesláním poptávky si prosím přečtěte <a href="/vseobecne-obchodni-podminky/" target="_blank" rel="noopener noreferrer">všeobecné obchodní a ubytovací podmínky</a>.</p>
               <button className="booking__send" type="submit" disabled={!validDates || sending}>{sending ? 'Odesílám…' : 'Odeslat nezávaznou poptávku'}</button>
             </form>
           </div>

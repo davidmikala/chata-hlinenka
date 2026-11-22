@@ -26,6 +26,10 @@ if (!validToken($_COOKIE['hlinenka_preview'] ?? null)) {
     exit;
 }
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/');
+// Samostatná stránka obchodních podmínek používá stejnou chráněnou aplikaci.
+if ($path === '/vseobecne-obchodni-podminky' || $path === '/vseobecne-obchodni-podminky/') {
+    $path = '/index.html';
+}
 if ($path === '/' || $path === '/index.html' || $path === '/preview.php') {
     $path = '/index.html';
 }

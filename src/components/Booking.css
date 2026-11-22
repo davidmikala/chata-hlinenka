@@ -162,3 +162,10 @@
   .booking__input-row { grid-template-columns: 1fr; }
   .hcal__grid { gap: 3px; }
 }
+
+/* Důležitá pravidla a odkaz na ubytovací podmínky */
+.booking__rules {margin-top:18px;padding:14px 16px;border:1px solid #e0e6da;border-radius:9px;background:#f6f5ee;color:#345244;display:grid;gap:8px;font-size:13px;line-height:1.55}
+.booking__rules p {margin:0}
+.booking__rules strong {font-weight:700}
+.booking__terms-note {margin:0;color:#516b5a;font-size:12px;line-height:1.6}
+.booking__terms-note a {color:#244c38;text-decoration:underline;text-underline-offset:3px;font-weight:700}

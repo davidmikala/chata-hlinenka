@@ -15,9 +15,22 @@ import Booking from './components/Booking.jsx';
 import MapSection from './components/MapSection.jsx';
 import Footer from './components/Footer.jsx';
 import ScrollProgress from './components/ScrollProgress.jsx';
+import Terms from './components/Terms.jsx';
 
 export default function App() {
   useReveal();
+
+  const onTermsPage = /^\/vseobecne-obchodni-podminky\/?$/.test(window.location.pathname);
+  if (onTermsPage) {
+    return (
+      <>
+        <ScrollProgress />
+        <Header />
+        <Terms />
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
