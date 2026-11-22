@@ -174,8 +174,10 @@ export default function Booking() {
       });
       const data = await r.json();
       if (!r.ok || !data.ok) throw new Error(data.message || 'Poptávku se nepodařilo odeslat.');
-      setFeedback({ ok: true, text: data.message });
-      if (data.notified) {
+      setFeedback({ ok: data.notified !== false, text: data.message });
+      // Poptávka je uložená i když e-mail neodejde. Formulář vyčistíme,
+      // aby host stejný záznam neodesílal opakovaně.
+      if (data.saved === true || data.notified === true) {
         setForm({ name: '', email: '', phone: '', message: '' });
         setStart(''); setEnd('');
       }
