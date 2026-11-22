@@ -3,7 +3,7 @@ import { ReserveButton } from './ui.jsx';
 import './MapSection.css';
 
 // poloha chaty (Hlinsko pod Hostýnem, ev. č. 10)
-export const MAP_URL = 'https://mapy.com/fnc/v1/showmap?center=17.6217614%2C49.3711206&zoom=16&mapset=outdoor&marker=true';
+export const MAP_URL = 'https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=17.6217614%2C49.3711206&zoom=16&marker=true';
 
 const LINES = [
   { label: 'Majitel', value: 'David Mikala' },
@@ -50,7 +50,7 @@ export default function MapSection() {
               Napsat e-mail
             </ReserveButton>
             <a className="link" href={MAP_URL} target="_blank" rel="noopener noreferrer">
-              Otevřít v Mapy.com
+              Turistická mapa Mapy.com
             </a>
           </div>
         </div>

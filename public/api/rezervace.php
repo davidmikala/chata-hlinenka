@@ -88,7 +88,7 @@ function overlaps(array $rows, string $start, string $end, ?string $ignore = nul
 // Schválený ceník za celou chatu – balíčky pobytů, nikoli cena za každý den.
 // Staré orientační denní sazby z prototypu se pro výpočet nepoužívají.
 function pricing_values(array $d): array {
-    $defaults = ['offShort' => 20000, 'offWeek' => 28000, 'extraNight' => 5000, 'summerWeek' => 35000];
+    $defaults = ['offShort' => 20000, 'offWeek' => 28000, 'extraNight' => 5000, 'summerShort' => 28000, 'summerWeek' => 35000];
     $custom = $d['pricing'] ?? [];
     if (!is_array($custom)) return $defaults;
     foreach ($defaults as $key => $value) {
@@ -114,7 +114,7 @@ function price_quote(array $d, string $start, string $end): array {
         $seasons[season_for_night($day)] = true;
     }
     $type = count($seasons) === 1 ? array_key_first($seasons) : 'mixed';
-    $minimum = $type === 'summer' || isset($seasons['summer']) ? 7 : 2;
+    $minimum = $type === 'summer' || isset($seasons['summer']) ? 4 : 2;
     $total = null;
     $label = match ($type) {
         'off' => 'Mimo sezónu',
@@ -132,17 +132,139 @@ function price_quote(array $d, string $start, string $end): array {
             $total = $weeks * $p['offWeek'] + min($p['offWeek'], $remaining * $p['extraNight']);
         }
     } elseif ($nights >= $minimum && $type === 'summer') {
-        $weeks = intdiv($nights, 7);
-        $remaining = $nights % 7;
-        $total = $weeks * $p['summerWeek'] + $remaining * $p['extraNight'];
+        if ($nights === 4) {
+            $total = $p['summerShort'];
+        } elseif ($nights <= 7) {
+            $total = $p['summerWeek'];
+        } else {
+            $weeks = intdiv($nights, 7);
+            $remaining = $nights % 7;
+            $total = $weeks * $p['summerWeek'] + $remaining * $p['extraNight'];
+        }
     }
     // Svátky a pobyty zasahující přes více sezón potvrzuje vždy provozovatel.
     return ['nights' => $nights, 'min' => $minimum, 'total' => $total, 'label' => $label, 'type' => $type];
 }
+// Bezpečná konfigurace SMTP je uložena MIMO public_html v souboru
+// .hlinenka-private/smtp-config.php (ne v GitHubu).
+// Pokud není nastavená, používá se dosavadní PHP mail() jako záloha.
+// Úspěch SMTP/mail() znamená předání poštovnímu serveru, nikoli potvrzené doručení.
+function smtp_settings(): ?array {
+    $privatePath = dirname(__DIR__, 2).'/.hlinenka-private/smtp-config.php';
+    if (!is_file($privatePath)) return null;
+    $v = @include $privatePath;
+    if (!is_array($v)) return null;
+    $host = (string)($v['host'] ?? '');
+    $user = (string)($v['user'] ?? '');
+    $pass = (string)($v['password'] ?? '');
+    $from = (string)($v['from'] ?? $user);
+    $port = (int)($v['port'] ?? 587);
+    if ($host === '' || preg_match('/[^a-zA-Z0-9.-]/', $host) ||
+        !in_array($port, [465, 587], true) || $pass === '' ||
+        !filter_var($user, FILTER_VALIDATE_EMAIL) || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
+        error_log('Hlinenka: neplatna konfigurace SMTP');
+        return null;
+    }
+    return ['host' => $host, 'port' => $port, 'user' => $user,
+        'password' => $pass, 'from' => $from];
+}
+function mail_transport_name(): string { return smtp_settings() ? 'smtp' : 'php-mail'; }
+
+function smtp_send_text(array $cfg, string $to, string $subject, string $body, ?string $replyTo): bool {
+    $connection = null;
+    try {
+        $host = $cfg['host'];
+        $port = $cfg['port'];
+        $uri = ($port === 465 ? 'ssl://' : 'tcp://').$host.':'.$port;
+        $ctx = stream_context_create(['ssl' => [
+            'verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $host
+        ]]);
+        $connection = @stream_socket_client($uri, $errno, $errstr, 12, STREAM_CLIENT_CONNECT, $ctx);
+        if (!is_resource($connection)) throw new RuntimeException('Nelze navazat SMTP spojeni');
+        stream_set_timeout($connection, 15);
+        $read = static function (array $expected) use (&$connection): void {
+            $last = '';
+            do {
+                $line = fgets($connection, 2048);
+                if ($line === false) throw new RuntimeException('SMTP neodpovida');
+                $last = $line;
+            } while (strlen($line) > 3 && $line[3] === '-');
+            if (!in_array(substr($last, 0, 3), $expected, true)) {
+                throw new RuntimeException('SMTP odpoved '.substr($last, 0, 3));
+            }
+        };
+        $cmd = static function (string $line, array $expected) use (&$connection, $read): void {
+            if (fwrite($connection, $line."\r\n") === false) {
+                throw new RuntimeException('SMTP zapis selhal');
+            }
+            $read($expected);
+        };
+        $read(['220']);
+        $cmd('EHLO chatahlinenka.cz', ['250']);
+        if ($port === 587) {
+            $cmd('STARTTLS', ['220']);
+            if (@stream_socket_enable_crypto($connection, true, STREAM_CRYPTO_METHOD_TLS_CLIENT) !== true) {
+                throw new RuntimeException('Nelze overit TLS certifikat SMTP');
+            }
+            $cmd('EHLO chatahlinenka.cz', ['250']);
+        }
+        $cmd('AUTH LOGIN', ['334']);
+        $cmd(base64_encode($cfg['user']), ['334']);
+        $cmd(base64_encode($cfg['password']), ['235']);
+        $cmd('MAIL FROM:<'.$cfg['from'].'>', ['250']);
+        $cmd('RCPT TO:<'.$to.'>', ['250', '251']);
+        $cmd('DATA', ['354']);
+        $subjectEncoded = '=?UTF-8?B?'.base64_encode($subject).'?=';
+        $headers = [
+            'Date: '.date(DATE_RFC2822),
+            'From: Chata Hlinenka <'.$cfg['from'].'>',
+            'To: <'.$to.'>',
+            'Subject: '.$subjectEncoded,
+            'MIME-Version: 1.0',
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: 8bit',
+        ];
+        if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+            $headers[] = 'Reply-To: <'.$replyTo.'>';
+        }
+        $normalized = str_replace(["\r\n", "\r"], "\n", $body);
+        $normalized = implode("\r\n", array_map(
+            static fn(string $line): string => str_starts_with($line, '.') ? '.'.$line : $line,
+            explode("\n", $normalized)
+        ));
+        $payload = implode("\r\n", $headers)."\r\n\r\n".$normalized."\r\n.\r\n";
+        if (fwrite($connection, $payload) !== strlen($payload)) {
+            throw new RuntimeException('SMTP zprava nebyla cela zapsana');
+        }
+        $read(['250']);
+        $cmd('QUIT', ['221']);
+        return true;
+    } catch (Throwable $e) {
+        // Nezapisovat do logu obsah zpravy ani prihlasovaci udaje.
+        error_log('Hlinenka: SMTP odeslani selhalo: '.$e->getMessage());
+        return false;
+    } finally {
+        if (is_resource($connection)) fclose($connection);
+    }
+}
+
 function send_mail_text(string $to, string $subject, string $message, ?string $replyTo = null): bool {
-    $headers = ['From: Chata Hlinenka <'.SENDER_MAIL.'>', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8'];
-    if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers[] = 'Reply-To: '.$replyTo;
-    return @mail($to, '=?UTF-8?B?'.base64_encode($subject).'?=', $message, implode("\r\n", $headers));
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL) ||
+        ($replyTo !== null && !filter_var($replyTo, FILTER_VALIDATE_EMAIL))) return false;
+    $smtp = smtp_settings();
+    if ($smtp !== null) {
+        // Pri selhani SMTP nespoustet automaticky php mail(), aby nevznikaly duplicity.
+        return smtp_send_text($smtp, $to, $subject, $message, $replyTo);
+    }
+    $headers = [
+        'From: Chata Hlinenka <'.SENDER_MAIL.'>',
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8'
+    ];
+    if ($replyTo) $headers[] = 'Reply-To: <'.$replyTo.'>';
+    $accepted = @mail($to, '=?UTF-8?B?'.base64_encode($subject).'?=', $message, implode("\r\n", $headers));
+    if (!$accepted) error_log('Hlinenka: PHP mail() neprevzal zpravu');
+    return $accepted;
 }
 function check_dates(string $start, string $end): int {
     if (!valid_day($start) || !valid_day($end)) err('Vyberte platná data.');
@@ -188,7 +310,8 @@ if ($method === 'GET') {
         require_admin();
         $d = data_store(fn(array &$d, bool &$save) => $d);
         unset($d['otp'], $d['last_code_at'], $d['ip_times']);
-        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d)]);
+        send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d),
+            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name()]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -239,9 +362,21 @@ if ($action === 'inquiry') {
         . "Orientační cena: ".($r['price'] === null ? 'Na vyžádání' : number_format($r['price'], 0, ',', ' ').' Kč')
         . "\nPoznámka: $message\n\nČeká na schválení. Správa: https://www.chatahlinenka.cz/sprava-rezervaci.html";
     $notified = send_mail_text(OWNER_MAIL, 'Nová poptávka ubytování – Chata Hliněnka', $text, $email);
-    send_json(['ok' => true, 'notified' => $notified, 'message' => $notified
-        ? 'Poptávka byla přijata. Ozveme se po jejím posouzení.'
-        : 'Poptávka je uložená, ale e-mailové upozornění se nepodařilo odeslat. Pro jistotu nás kontaktujte telefonicky.']);
+    // Stav odeslani ulozit k rezervaci – i pri selhani emailu se zaznam neztrati.
+    data_store(function(array &$d, bool &$save) use ($r, $notified) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $r['id']) continue;
+            $record['emailNoticeStatus'] = $notified ? 'accepted' : 'failed';
+            $record['emailNoticeAt'] = date(DATE_ATOM);
+            $save = true;
+            break;
+        }
+        return null;
+    });
+    send_json(['ok' => true, 'saved' => true, 'notified' => $notified,
+        'message' => $notified
+        ? 'Poptávka byla bezpečně uložena. Upozornění jsme předali poštovní službě, ale doručení e-mailu nelze automaticky potvrdit.'
+        : 'Poptávka byla uložena do správy rezervací, ale upozornění e-mailem se nepodařilo odeslat. Prosíme, kontaktujte nás také telefonicky.']);
 }
 if ($action === 'request-code') {
     // Přihlášení jen kódem doručeným provozovateli, žádné veřejné heslo.
@@ -276,6 +411,36 @@ if ($action === 'logout') {
 }
 require_admin();
 
+if ($action === 'retry-inquiry-notice') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $r = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['records'] ?? [] as $item) if (($item['id'] ?? '') === $id) return $item;
+        return null;
+    });
+    if (!$r || ($r['source'] ?? '') !== 'Web') err('Webova poptavka nebyla nalezena.', 404);
+    $name = (string)($r['name'] ?? '');
+    $email = (string)($r['email'] ?? '');
+    $text = "Znovu zaslane upozorneni na poptavku Chaty Hlinenka\n\n"
+        ."Jmeno: ".$name."\nE-mail: ".$email."\nTelefon: ".($r['phone'] ?? '')
+        ."\nPocet hostu: ".($r['people'] ?? '')
+        ."\nTermin: ".$r['start']." az ".$r['end']
+        ."\nCena: ".($r['price'] === null ? 'Na vyzadani' : number_format((int)$r['price'], 0, ',', ' ').' Kc')
+        ."\nPoznamka: ".($r['message'] ?? '')
+        ."\n\nSprava: https://www.chatahlinenka.cz/sprava-rezervaci.html";
+    $sent = send_mail_text(OWNER_MAIL, 'Upozorneni na poptavku – Chata Hlinenka', $text,
+        filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null);
+    data_store(function(array &$d, bool &$save) use ($id, $sent) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $id) continue;
+            $record['emailNoticeStatus'] = $sent ? 'accepted' : 'failed';
+            $record['emailNoticeAt'] = date(DATE_ATOM);
+            $save = true;
+            break;
+        }
+        return null;
+    });
+    send_json(['ok' => true, 'notified' => $sent]);
+}
 if ($action === 'decision') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $status = (string)($body['status'] ?? '');
@@ -324,7 +489,7 @@ if ($action === 'delete') {
 }
 if ($action === 'pricing') {
     $newPrices = [];
-    foreach (['offShort', 'offWeek', 'extraNight', 'summerWeek'] as $key) {
+    foreach (['offShort', 'offWeek', 'extraNight', 'summerShort', 'summerWeek'] as $key) {
         $price = filter_var($body[$key] ?? null, FILTER_VALIDATE_INT);
         if ($price === false || $price < 1 || $price > 250000) err('Zkontrolujte cenu '.$key.'.');
         $newPrices[$key] = $price;
