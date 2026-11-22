@@ -26,10 +26,13 @@
   text-align: center;
 }
 
+/* Originalni kruhove logo Chaty Hlinenka, bez bileho ctvercoveho okoli. */
 .footer__logo {
-  width: 198px;
-  height: 132px;
-  object-fit: contain;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 50%;
+  clip-path: circle(47.5% at 50% 50%);
 }
 
 .footer__brand p {

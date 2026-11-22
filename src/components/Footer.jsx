@@ -1,5 +1,5 @@
 import bg from '../assets/figma/footer-bg.png';
-import logo from '../assets/figma/logo-footer.webp';
+import logo from '../assets/photos/logo-zemite.webp';
 import instagram from '../assets/figma/icon-instagram.svg';
 import facebook from '../assets/figma/icon-facebook.svg';
 import arrowUp from '../assets/figma/icon-arrow-up.svg';
@@ -20,7 +20,7 @@ export default function Footer() {
     <footer className="footer" style={{ '--footer-bg': `url(${bg})` }}>
       <div className="container footer__inner">
         <div className="footer__brand" data-reveal>
-          <img className="footer__logo" src={logo} alt="Chata Hliněnka" width="198" height="132" />
+          <img className="footer__logo" src={logo} alt="Chata Hliněnka" width="150" height="150" />
           <p>Rodinná chata na samotě u lesa v Hostýnských vrších.</p>
           <div className="footer__social">
             <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
