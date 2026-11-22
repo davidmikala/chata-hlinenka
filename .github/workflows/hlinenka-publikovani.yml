@@ -1,8 +1,8 @@
 
-name: Hlinenka - test publikovani
+name: Hlinenka - publikovani na Webglobe
 
 on:
-push:
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +29,7 @@ jobs:
       - name: Sestavit web
         run: npm run build
 
-      - name: Test pripojeni k Webglobe
+      - name: Nahrat web na Webglobe
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_HOST }}
@@ -39,4 +39,3 @@ jobs:
           port: 21
           local-dir: ./dist/
           server-dir: ./public_html/
-          
