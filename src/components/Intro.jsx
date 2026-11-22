@@ -1,9 +1,9 @@
-import i1 from '../assets/photos/obyvak-brizy.webp';
-import i2 from '../assets/photos/chata-zahrada.webp';
-import i3 from '../assets/photos/chata-svah.webp';
-import i4 from '../assets/photos/jidelna-stul.webp';
-import i5 from '../assets/photos/koupelna-vana.webp';
-import i6 from '../assets/photos/obyvak-krb.webp';
+import i1 from '../assets/photos/hlinenka-galerie-01.webp';
+import i2 from '../assets/photos/hlinenka-galerie-04.webp';
+import i3 from '../assets/photos/hlinenka-galerie-02.webp';
+import i4 from '../assets/photos/hlinenka-galerie-05.webp';
+import i5 from '../assets/photos/hlinenka-galerie-03.webp';
+import i6 from '../assets/photos/hlinenka-galerie-06.webp';
 import brush from '../assets/figma/brush-intro.svg';
 import { SectionHead } from './ui.jsx';
 import './Intro.css';
@@ -11,16 +11,16 @@ import './Intro.css';
 // m = pořadí na mobilu, wide = na mobilu přes celou šířku (fotky na šířku)
 const COLUMNS = [
   [
-    { src: i1, alt: 'Obývací pokoj s březovými kmeny a zelenou sedačkou', tall: true, m: 2 },
-    { src: i2, alt: 'Chata Hliněnka se zahradou a přístřeškem', m: 1, wide: true },
+    { src: i1, alt: 'Obývací pokoj s krbem, dřevěným obkladem a zelenou pohovkou', tall: true, m: 2 },
+    { src: i2, alt: 'Chata Hliněnka z čelního pohledu na podzim', m: 1, wide: true },
   ],
   [
-    { src: i3, alt: 'Chata na svahu v podzimních barvách', m: 4, wide: true },
-    { src: i4, alt: 'Jídelní stůl s ovocem a tulipány', tall: true, m: 3 },
+    { src: i3, alt: 'Chata Hliněnka a stodola ve večerním světle', m: 4, wide: true },
+    { src: i4, alt: 'Obývací pokoj s kuchyní a jídelním stolem', tall: true, m: 3 },
   ],
   [
-    { src: i5, alt: 'Koupelna s černou volně stojící vanou', tall: true, m: 5 },
-    { src: i6, alt: 'Obývací pokoj s krbovými kamny', m: 6, pos: '22% 50%' },
+    { src: i5, alt: 'Koupelna s černou vanou a sprchou', tall: true, m: 5 },
+    { src: i6, alt: 'Interiér stodoly s dlouhými dřevěnými stoly', m: 6 },
   ],
 ];
 
