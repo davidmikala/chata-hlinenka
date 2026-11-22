@@ -1,0 +1,26 @@
+name: Diagnostika dostupnosti rezervacniho API
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Overit verejne odpovedi API
+        shell: bash
+        run: |
+          for host in "www.chatahlinenka.cz" "chatahlinenka.cz"; do
+            endpoint="https://${host}/api/rezervace.php?action=calendar"
+            code=$(curl -sS -L --connect-timeout 12 --max-time 20 -D /tmp/hlinenka-headers.txt -o /tmp/hlinenka-response.txt -w '%{http_code}' "$endpoint" || true)
+            ctype=$(grep -i '^content-type:' /tmp/hlinenka-headers.txt | tail -1 | tr -d '\r' | cut -c1-120)
+            body=$(head -c 250 /tmp/hlinenka-response.txt | tr '\r\n' '  ' | sed 's/::/--/g')
+            echo "::notice title=HTTP ${host}::Status: ${code}; ${ctype}"
+            echo "::notice title=Response ${host}::${body}"
+            if jq -e '.ok == true and (.occupied | type == "array")' /tmp/hlinenka-response.txt >/dev/null 2>&1; then
+              echo "::notice title=API health ${host}::Response is valid and contains occupied array."
+            else
+              echo "::warning title=API health ${host}::Response is NOT the expected valid calendar JSON."
+            fi
+          done
