@@ -21,3 +21,26 @@ jobs:
         run: php -l public/api/rezervace.php
       - name: Sestavit web
         run: npm run build
+
+      - name: Overit verejne soubory bez nahledoveho omezeni
+        run: |
+          test -f dist/.htaccess
+          grep -Fq 'RewriteRule ^api/ - [L]' dist/.htaccess
+          test ! -f dist/preview.php
+          test ! -f dist/api/probe.php
+          grep -Fq 'Allow: /' dist/robots.txt
+          test -f dist/sprava-rezervaci.html
+      - name: Overit realny PHP kalendar, relaci a pristup do spravy
+        shell: bash
+        run: |
+          php -S 127.0.0.1:8765 -t dist >/tmp/hlinenka-php-test.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf 'http://127.0.0.1:8765/api/rezervace.php?action=health' >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS 'http://127.0.0.1:8765/api/rezervace.php?action=calendar' | jq -e '.ok == true and (.occupied | type == "array")'
+          curl -fsS 'http://127.0.0.1:8765/api/rezervace.php?action=session' | jq -e '.ok == true and .admin == false'
+          code=$(curl -sS -o /tmp/hlinenka-admin-response.json -w '%{http_code}' 'http://127.0.0.1:8765/api/rezervace.php?action=admin')
+          test "$code" = 401
+          jq -e '.ok == false' /tmp/hlinenka-admin-response.json
+          curl -fsS 'http://127.0.0.1:8765/api/rezervace.php?action=ical' | grep -Fq 'BEGIN:VCALENDAR'
