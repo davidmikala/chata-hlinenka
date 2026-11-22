@@ -74,3 +74,23 @@ jobs:
           else
             ! grep -Eq '(Uložiště rezervací není na hostingu přístupné|Rezervační systém není připraven k ukládání|Uložiště je dočasně nedostupné|<!doctype|<html)' /tmp/answer
           fi
+
+  php_health:
+    name: "PHP health: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "404", "500", "503"]
+    steps:
+      - name: Otestovat PHP bez nacitani rezervaci
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/api/rezervace.php?action=health' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and .service == "php"' /tmp/answer >/dev/null 2>&1
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
