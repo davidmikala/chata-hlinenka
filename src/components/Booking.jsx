@@ -200,7 +200,7 @@ export default function Booking() {
                     <span>{dateCZ(start)} – {dateCZ(end)} · {currentQuote.nights} nocí</span>
                     <strong>{currentQuote.total !== null ? currency(currentQuote.total) : 'Cena na vyžádání'}</strong>
                     {currentQuote.nights < currentQuote.min && <span className="booking__invalid">Minimální délka: {currentQuote.min} nocí.</span>}
-                    <small>Orientační částku upřesníme při potvrzení podle platného ceníku. Vratná kauce 10 000 Kč není součástí ceny.</small>
+                    <small>Orientační částku upřesníme při potvrzení podle platného ceníku. Vratná kauce 5 000 Kč není součástí ceny.</small>
                   </>
                 ) : <span>Vyberte termín pro orientační kalkulaci pobytu.</span>}
               </div>
