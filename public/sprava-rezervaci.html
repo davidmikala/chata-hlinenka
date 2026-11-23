@@ -197,7 +197,7 @@ byId('records').onclick=async(e)=>{
   if(act==='set-agreed-price'){
     const value=prompt('Celková písemně sjednaná cena pobytu v Kč (před vystavením zálohy):');
     if(value===null)return;
-    if(!/^\\d+$/.test(value.trim())){feedback('Zadejte cenu v celých Kč.',true);return;}
+    if(!/^\d+$/.test(value.trim())){feedback('Zadejte cenu v celých Kč.',true);return;}
     try{await post('set-agreed-price',{id,price:Number(value.trim())});feedback('Cena uložena.');await refresh();}catch(err){feedback(err.message,true);}
     return;
   }
