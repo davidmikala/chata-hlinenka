@@ -170,7 +170,7 @@ function smtp_settings(): ?array {
 }
 function mail_transport_name(): string { return smtp_settings() ? 'smtp' : 'php-mail'; }
 
-function smtp_send_text(array $cfg, string $to, string $subject, string $body, ?string $replyTo): bool {
+function smtp_send_text(array $cfg, string $to, string $subject, string $body, ?string $replyTo, ?string $mimeContentType = null): bool {
     $connection = null;
     try {
         $host = $cfg['host'];
@@ -221,9 +221,11 @@ function smtp_send_text(array $cfg, string $to, string $subject, string $body, ?
             'To: <'.$to.'>',
             'Subject: '.$subjectEncoded,
             'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'Content-Transfer-Encoding: 8bit',
+            'Content-Type: '.($mimeContentType ?? 'text/plain; charset=UTF-8'),
         ];
+        if ($mimeContentType === null) {
+            $headers[] = 'Content-Transfer-Encoding: 8bit';
+        }
         if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
             $headers[] = 'Reply-To: <'.$replyTo.'>';
         }
@@ -233,8 +235,16 @@ function smtp_send_text(array $cfg, string $to, string $subject, string $body, ?
             explode("\n", $normalized)
         ));
         $payload = implode("\r\n", $headers)."\r\n\r\n".$normalized."\r\n.\r\n";
-        if (fwrite($connection, $payload) !== strlen($payload)) {
-            throw new RuntimeException('SMTP zprava nebyla cela zapsana');
+        // Dlouha HTML zprava s vlozenymi obrazky muze presahovat velikost jednoho fwrite().
+        $written = 0;
+        $length = strlen($payload);
+        while ($written < $length) {
+            $chunk = substr($payload, $written, 16384);
+            $bytes = fwrite($connection, $chunk);
+            if ($bytes === false || $bytes === 0) {
+                throw new RuntimeException('SMTP zprava nebyla cela zapsana');
+            }
+            $written += $bytes;
         }
         $read(['250']);
         $cmd('QUIT', ['221']);
@@ -266,6 +276,171 @@ function send_mail_text(string $to, string $subject, string $message, ?string $r
     if (!$accepted) error_log('Hlinenka: PHP mail() neprevzal zpravu');
     return $accepted;
 }
+// Automaticka odpoved zakaznikovi po odeslani nezavazne poptavky.
+// Obrazky jsou dodane majitelem Chaty Hlinenka, nikoli AI generovane.
+// Vlozene jako CID (multipart/related), aby se zobrazovaly i bez nacteni externeho obsahu.
+function send_mail_html_inline(
+    string $to,
+    string $subject,
+    string $plain,
+    string $html,
+    array $images,
+    ?string $replyTo = null
+): bool {
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL) ||
+        ($replyTo !== null && !filter_var($replyTo, FILTER_VALIDATE_EMAIL))) return false;
+
+    // Pokud chybi obrazek na hostingu, poslat alespon textovy e-mail, aby host vedel o prijeti.
+    foreach ($images as $img) {
+        if (!is_file($img['path']) || !is_readable($img['path'])) {
+            error_log('Hlinenka: chybi verejny obrazek potvrzeni poptavky');
+            return send_mail_text($to, $subject, $plain, $replyTo);
+        }
+    }
+
+    $related = 'hlinenka_related_'.bin2hex(random_bytes(12));
+    $alternative = 'hlinenka_alt_'.bin2hex(random_bytes(12));
+    $body = '--'.$related."\r\n"
+        .'Content-Type: multipart/alternative; boundary="'.$alternative.'"'."\r\n\r\n"
+        .'--'.$alternative."\r\n"
+        ."Content-Type: text/plain; charset=UTF-8\r\n"
+        ."Content-Transfer-Encoding: base64\r\n\r\n"
+        .chunk_split(base64_encode($plain), 76, "\r\n")
+        .'--'.$alternative."\r\n"
+        ."Content-Type: text/html; charset=UTF-8\r\n"
+        ."Content-Transfer-Encoding: base64\r\n\r\n"
+        .chunk_split(base64_encode($html), 76, "\r\n")
+        .'--'.$alternative."--\r\n";
+    foreach ($images as $img) {
+        $bytes = @file_get_contents($img['path']);
+        if ($bytes === false) {
+            error_log('Hlinenka: nelze precist obrazek potvrzeni poptavky');
+            return send_mail_text($to, $subject, $plain, $replyTo);
+        }
+        $body .= '--'.$related."\r\n"
+            .'Content-Type: image/jpeg; name="'.$img['name'].'"'."\r\n"
+            ."Content-Transfer-Encoding: base64\r\n"
+            .'Content-ID: <'.$img['cid'].'>'."\r\n"
+            .'Content-Disposition: inline; filename="'.$img['name'].'"'."\r\n\r\n"
+            .chunk_split(base64_encode($bytes), 76, "\r\n");
+    }
+    $body .= '--'.$related."--\r\n";
+    $mimeContentType = 'multipart/related; boundary="'.$related.'"';
+    $smtp = smtp_settings();
+    if ($smtp !== null) {
+        // Jeden pokus pres SMTP. Po chybe neodesilat duplicitne jinou cestou.
+        return smtp_send_text($smtp, $to, $subject, $body, $replyTo, $mimeContentType);
+    }
+    $headers = [
+        'From: Chata Hlinenka <'.SENDER_MAIL.'>',
+        'MIME-Version: 1.0',
+        'Content-Type: '.$mimeContentType,
+    ];
+    if ($replyTo) $headers[] = 'Reply-To: <'.$replyTo.'>';
+    $accepted = @mail($to, '=?UTF-8?B?'.base64_encode($subject).'?=', $body, implode("\r\n", $headers));
+    if (!$accepted) error_log('Hlinenka: PHP mail() neprevzal automatickou odpoved hostovi');
+    return $accepted;
+}
+
+function send_guest_inquiry_receipt(array $r): bool {
+    $name = (string)($r['name'] ?? '');
+    $email = (string)($r['email'] ?? '');
+    $start = (string)($r['start'] ?? '');
+    $end = (string)($r['end'] ?? '');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !valid_day($start) || !valid_day($end)) return false;
+
+    $startFormatted = (new DateTimeImmutable($start))->format('j. n. Y');
+    $endFormatted = (new DateTimeImmutable($end))->format('j. n. Y');
+    $dates = $startFormatted.' – '.$endFormatted;
+    $safeName = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $safeDates = htmlspecialchars($dates, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    $subject = 'Přijali jsme vaši poptávku – Chata Hliněnka';
+    $plain = "Vaši poptávku jsme úspěšně přijali\n\n"
+        ."Dobrý den,\n\n"
+        ."Moc nás těší váš zájem o pobyt na Chatě Hliněnka. Vaše poptávka k nám v pořádku dorazila.\n\n"
+        ."Požadovaný termín: ".$dates."\n"
+        ."Stav: Poptávka čeká na potvrzení.\n\n"
+        ."Jakmile ověříme dostupnost termínu, pošleme vám samostatný e-mail s potvrzením rezervace "
+        ."nebo se s vámi spojíme kvůli dalším podrobnostem.\n\n"
+        ."Odesláním poptávky ještě nevzniká závazná rezervace ani automatická blokace termínu.\n\n"
+        ."Pokud budete mít jakýkoliv dotaz, neváhejte se nám ozvat.\n\n"
+        ."Těšíme se na vás!\n\n"
+        ."David Mikala\nChata Hliněnka\n"
+        ."+420 605 270 444\n"
+        ."david@mikala.cz\n"
+        ."www.chatahlinenka.cz";
+
+    $html = <<<HTML
+<!doctype html>
+<html lang="cs">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3eee6;font-family:Arial,Helvetica,sans-serif;color:#203c2b;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f3eee6;">
+<tr><td align="center" style="padding:24px 12px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="620" style="width:100%;max-width:620px;background:#fffcf7;border-radius:18px;overflow:hidden;">
+    <tr><td>
+      <img src="cid:chata-photo@chatahlinenka.cz" alt="Chata Hliněnka v Hostýnských vrších" width="620"
+        style="display:block;width:100%;height:auto;border:0;">
+    </td></tr>
+    <tr><td align="center" style="padding:22px 25px 0;">
+      <img src="cid:chata-logo@chatahlinenka.cz" alt="Logo Chaty Hliněnka" width="106" height="106"
+        style="display:block;width:106px;height:106px;border-radius:53px;border:2px solid #1d422c;">
+    </td></tr>
+    <tr><td align="center" style="padding:10px 28px 20px;">
+      <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;color:#183e2a;font-size:32px;line-height:1.15;font-weight:normal;">Vaši poptávku jsme přijali</h1>
+      <p style="margin:12px 0 0;color:#5d6a5f;font-size:15px;line-height:1.6;">
+        Děkujeme, že jste si pro svůj pobyt vybrali Chatu Hliněnka.
+      </p>
+    </td></tr>
+    <tr><td style="padding:0 30px 20px;">
+      <p style="font-size:15px;line-height:1.75;margin:0 0 12px;">Dobrý den,</p>
+      <p style="font-size:15px;line-height:1.75;margin:0 0 16px;">
+        moc nás těší váš zájem o pobyt na naší chatě. <strong>Vaše poptávka k nám v pořádku dorazila</strong> a budeme se jí věnovat.
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#efead8;border-radius:12px;">
+        <tr><td style="padding:18px 20px;">
+          <span style="font-size:12px;color:#607164;letter-spacing:1px;">POŽADOVANÝ TERMÍN POBYTU</span>
+          <div style="font-size:22px;line-height:1.35;color:#153b28;font-family:Georgia,'Times New Roman',serif;font-weight:bold;margin-top:6px;">{$safeDates}</div>
+        </td></tr>
+      </table>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:14px;background:#fff3de;border:1px solid #edcf95;border-radius:10px;">
+        <tr><td style="padding:15px 18px;">
+          <strong style="font-size:16px;color:#705124;">Poptávka čeká na potvrzení</strong>
+          <p style="font-size:14px;line-height:1.6;color:#604f35;margin:6px 0 0;">
+            Termín zatím není závazně rezervován ani blokován. Po ověření dostupnosti vám zašleme samostatné potvrzení rezervace.
+          </p>
+        </td></tr>
+      </table>
+      <p style="font-size:15px;line-height:1.75;margin:18px 0 12px;">
+        Pokud bude potřeba něco upřesnit, ozveme se e-mailem nebo telefonicky. A kdybyste měli otázky vy, jsme tu pro vás.
+      </p>
+      <p style="font-size:15px;line-height:1.7;margin:22px 0 0;">
+        Těšíme se na vás!<br>
+        <strong>David Mikala</strong><br>
+        Chata Hliněnka
+      </p>
+    </td></tr>
+    <tr><td style="padding:24px 20px;background:#113923;text-align:center;color:#f8f3e8;font-size:13px;line-height:1.9;">
+      <a href="tel:+420605270444" style="color:#f8f3e8;text-decoration:none;">+420 605 270 444</a>
+      &nbsp; · &nbsp;
+      <a href="mailto:david@mikala.cz" style="color:#f8f3e8;text-decoration:none;">david@mikala.cz</a><br>
+      <a href="https://www.chatahlinenka.cz" style="color:#f8f3e8;text-decoration:underline;">www.chatahlinenka.cz</a>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>
+HTML;
+    $base = dirname(__DIR__).'/email';
+    $images = [
+        ['path' => $base.'/chata-hlinenka-foto-09.jpg', 'cid' => 'chata-photo@chatahlinenka.cz',
+         'name' => 'chata-hlinenka.jpg'],
+        ['path' => $base.'/logo-hlinenka-prirodni.jpg', 'cid' => 'chata-logo@chatahlinenka.cz',
+         'name' => 'logo-chata-hlinenka.jpg'],
+    ];
+    return send_mail_html_inline($email, $subject, $plain, $html, $images, OWNER_MAIL);
+}
+
 function check_dates(string $start, string $end): int {
     if (!valid_day($start) || !valid_day($end)) err('Vyberte platná data.');
     $n = days_between($start, $end);
@@ -373,7 +548,20 @@ if ($action === 'inquiry') {
         }
         return null;
     });
-    send_json(['ok' => true, 'saved' => true, 'notified' => $notified,
+    // Potvrzeni o PRIJETI poptavky, nikoli o schvaleni rezervace.
+    // Odesilame az po ulozeni zaznamu a upozorneni majitele.
+    $guestNotified = send_guest_inquiry_receipt($r);
+    data_store(function(array &$d, bool &$save) use ($r, $guestNotified) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $r['id']) continue;
+            $record['guestNoticeStatus'] = $guestNotified ? 'accepted' : 'failed';
+            $record['guestNoticeAt'] = date(DATE_ATOM);
+            $save = true;
+            break;
+        }
+        return null;
+    });
+    send_json(['ok' => true, 'saved' => true, 'notified' => $notified, 'guestNotified' => $guestNotified,
         'message' => $notified
         ? 'Poptávka byla bezpečně uložena. Upozornění jsme předali poštovní službě, ale doručení e-mailu nelze automaticky potvrdit.'
         : 'Poptávka byla uložena do správy rezervací, ale upozornění e-mailem se nepodařilo odeslat. Prosíme, kontaktujte nás také telefonicky.']);
