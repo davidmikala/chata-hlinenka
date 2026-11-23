@@ -634,6 +634,22 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = (string)($_GET['action'] ?? 'calendar');
 
 if ($method === 'GET') {
+    if ($action === 'invoice-view') {
+        $token = (string)($_GET['token'] ?? '');
+        if (!preg_match('/^[0-9a-f]{48}$/D', $token)) err('Doklad nebyl nalezen.', 404);
+        $inv = data_store(function(array &$d, bool &$save) use ($token) {
+            foreach ($d['invoices'] ?? [] as $doc) {
+                if (hash_equals((string)($doc['token'] ?? ''), $token)) return $doc;
+            }
+            return null;
+        });
+        if ($inv === null) err('Doklad nebyl nalezen.', 404);
+        header('Content-Type: text/html; charset=utf-8');
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        header('X-Frame-Options: DENY');
+        echo invoice_html($inv);
+        exit;
+    }
     if ($action === 'calendar') {
         $view = data_store(function(array &$d, bool &$save) {
             return [
@@ -669,7 +685,9 @@ if ($method === 'GET') {
         $d = data_store(fn(array &$d, bool &$save) => $d);
         unset($d['otp'], $d['last_code_at'], $d['ip_times']);
         send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d),
-            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name()]);
+            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name(),
+            'billingSettings' => billing_settings($d), 'billingReady' => billing_ready(billing_settings($d)),
+            'invoices' => private_documents($d)]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -812,6 +830,117 @@ if ($action === 'retry-inquiry-notice') {
     });
     send_json(['ok' => true, 'notified' => $sent]);
 }
+if ($action === 'billing-settings') {
+    $sellerName = required_text($body['sellerName'] ?? null, 150, 'dodavatel');
+    $sellerAddress = required_text($body['sellerAddress'] ?? null, 300, 'adresa dodavatele');
+    $sellerId = required_text($body['sellerId'] ?? null, 8, 'IČO');
+    if (!preg_match('/^\d{8}$/D', $sellerId)) err('IČO musí obsahovat 8 číslic.');
+    $vatMode = (string)($body['vatMode'] ?? '');
+    if (!in_array($vatMode, ['nonvat','vat'], true)) err('Vyberte, zda je ubytovatel plátce DPH.');
+    $vatId = trim((string)($body['sellerVatId'] ?? ''));
+    if (mb_strlen($vatId) > 24) err('DIČ je příliš dlouhé.');
+    if ($vatMode === 'vat' && $vatId === '') err('Plátce DPH musí vyplnit DIČ.');
+    $iban = strtoupper(preg_replace('/\s+/', '', (string)($body['iban'] ?? '')));
+    if (!valid_cz_iban($iban)) err('Zadejte platný český IBAN.');
+    $bankAccount = trim((string)($body['bankAccount'] ?? ''));
+    if (mb_strlen($bankAccount) > 80) err('Číslo bankovního účtu je příliš dlouhé.');
+    $settings = compact('sellerName','sellerAddress','sellerId','vatMode','iban','bankAccount');
+    $settings['sellerVatId'] = $vatId;
+    data_store(function(array &$d, bool &$save) use ($settings) {
+        $d['billingSettings'] = $settings;
+        $save = true;
+    });
+    send_json(['ok'=>true,'ready'=>billing_ready($settings),
+        'message'=>$vatMode==='vat'
+          ? 'Nastavení uloženo. Automatické vystavování daňových dokladů plátce DPH není aktivní; je nutné ověřit DPH režim a daňové doklady k zálohám.'
+          : 'Fakturační údaje uloženy. Automatická vystavování proformy a vyúčtování jsou připravena.']);
+}
+if ($action === 'invoice-customer') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $name = required_text($body['name'] ?? null, 150, 'fakturační jméno odběratele');
+    $address = required_text($body['address'] ?? null, 300, 'fakturační adresa odběratele');
+    data_store(function(array &$d, bool &$save) use ($id, $name, $address) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $id) continue;
+            if (invoice_record($d, $id, 'deposit')) err('Pro již vystavené doklady nelze měnit fakturační údaje. Kontaktujte správce.', 409);
+            $record['billingName'] = $name;
+            $record['billingAddress'] = $address;
+            $save = true;
+            return null;
+        }
+        err('Rezervace nenalezena.', 404);
+    });
+    send_json(['ok'=>true]);
+}
+if ($action === 'set-agreed-price') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $price = filter_var($body['price'] ?? null, FILTER_VALIDATE_INT);
+    if ($price === false || $price < 1000 || $price > 1000000) err('Cena musí být celé Kč od 1 000 do 1 000 000.');
+    data_store(function(array &$d, bool &$save) use ($id, $price) {
+        foreach ($d['records'] as &$r) {
+            if (($r['id'] ?? '') !== $id) continue;
+            if (($r['status'] ?? '') !== 'pending' || invoice_record($d, $id, 'deposit')) {
+                err('Cenu lze upravit jen u nové poptávky před vystavením dokladu.',409);
+            }
+            $r['price'] = $price;
+            $save = true;
+            return null;
+        }
+        err('Rezervace nenalezena.',404);
+    });
+    send_json(['ok'=>true]);
+}
+if ($action === 'resend-invoice') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $inv = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['invoices'] ?? [] as $document) if (($document['id'] ?? '') === $id) return $document;
+        return null;
+    });
+    if (!$inv || !filter_var($inv['customerEmail'] ?? '', FILTER_VALIDATE_EMAIL)) err('Doklad nebyl nalezen nebo chybí e-mail.',404);
+    $link = invoice_public_link($inv);
+    $sent = send_mail_text($inv['customerEmail'], $inv['type'] === 'deposit'
+            ? 'Zálohová faktura k pobytu – Chata Hliněnka'
+            : ($inv['type'] === 'balance' ? 'Podklady pro doplatek pobytu – Chata Hliněnka' : 'Vyúčtování pobytu – Chata Hliněnka'),
+        "Dobrý den,\n\nzasíláme vám doklad ".$inv['number']." k pobytu na Chatě Hliněnka ("
+          .$inv['dateStart']." – ".$inv['dateEnd'].").\n\nDoklad k zobrazení, tisku a uložení jako PDF:\n".$link
+          ."\n\nS pozdravem\nChata Hliněnka", OWNER_MAIL);
+    send_json(['ok'=>true,'notified'=>$sent]);
+}
+if ($action === 'record-balance') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $result = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['records'] as &$r) {
+            if (($r['id'] ?? '') !== $id) continue;
+            if (($r['status'] ?? '') !== 'approved' || empty($r['depositPaidAt'])) {
+                return ['error'=>'Rezervace není potvrzena po přijetí zálohy.'];
+            }
+            if (!empty($r['balancePaidAt']) || invoice_record($d, $id, 'final')) {
+                return ['error'=>'Doplatek už je evidován.'];
+            }
+            $r['balancePaidAt'] = date(DATE_ATOM);
+            foreach ($d['invoices'] ?? [] as &$doc) {
+                if (($doc['reservationId'] ?? '') === $id && ($doc['type'] ?? '') === 'balance') {
+                    $doc['status'] = 'paid'; $doc['paidAt'] = date(DATE_ATOM);
+                }
+            }
+            unset($doc);
+            $inv = create_invoice($d, $r, 'final', 0);
+            $r['finalInvoiceId'] = $inv['id'];
+            $save = true;
+            return ['invoice'=>$inv];
+        }
+        return ['error'=>'Rezervace nenalezena.'];
+    });
+    if (isset($result['error'])) err($result['error'], 409);
+    $inv = $result['invoice'];
+    $sent = empty($inv['customerEmail']) ? false : send_mail_text(
+        $inv['customerEmail'],'Vyúčtování pobytu – Chata Hliněnka',
+        "Dobrý den,\n\npotvrzujeme přijetí doplatku za pobyt na Chatě Hliněnka.\n"
+          ."Vaše vyúčtovací faktura ".$inv['number']." je vystavená, zbývá uhradit 0 Kč.\n\n"
+          ."Doklad: ".invoice_public_link($inv)."\n\nTěšíme se na vás!\nChata Hliněnka", OWNER_MAIL);
+    send_json(['ok'=>true,'notified'=>$sent,'invoice'=>$inv['number']]);
+}
+
 if ($action === 'decision') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $status = (string)($body['status'] ?? '');
