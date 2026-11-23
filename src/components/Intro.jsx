@@ -3,7 +3,7 @@ import i2 from '../assets/photos/hlinenka-galerie-04.webp';
 import i3 from '../assets/photos/hlinenka-galerie-02.webp';
 import i4 from '../assets/photos/hlinenka-galerie-05.webp';
 import i5 from '../assets/photos/hlinenka-galerie-03.webp';
-import i6 from '../assets/photos/hlinenka-galerie-06.webp';
+import i6 from '../assets/photos/stodola-interier-uprav.jpg';
 import brush from '../assets/figma/brush-intro.svg';
 import { SectionHead } from './ui.jsx';
 import './Intro.css';
