@@ -108,6 +108,11 @@ function season_for_night(string $day): string {
 function price_quote(array $d, string $start, string $end): array {
     $p = pricing_values($d);
     $nights = days_between($start, $end);
+    // Silvestr 2026/2027: libovolny pobyt 1 az 5 noci v intervalu, stejna celkova cena.
+    if ($start >= '2026-12-29' && $end <= '2027-01-03' && $nights >= 1 && $nights <= 5) {
+        return ['nights' => $nights, 'min' => 1, 'total' => 40000,
+            'label' => 'Silvestr 2026/2027 · pevná cena', 'type' => 'newyear2026'];
+    }
     $seasons = [];
     for ($i = 0; $i < $nights; $i++) {
         $day = gmdate('Y-m-d', strtotime($start.' 12:00:00 UTC') + $i * 86400);
