@@ -28,10 +28,24 @@ export default function Equipment() {
       <div className="container equipment__inner">
         <SectionHead eyebrow="Vybavení" title="Vše, co potřebujete pro pohodlný pobyt" tone="green">
           <p>
-            Chata je plně vybavena tak, abyste si svůj pobyt mohli užít bez starostí. Najdete zde útulný interiér, moderní zázemí i praktické vybavení, které vám
-            zajistí maximální komfort po celou dobu pobytu.
+            Na Hliněnce jsme mysleli na každý detail, abyste si svůj pobyt mohli užít naplno a bez zbytečných starostí.
+            Chceme, abyste se u nás cítili stejně pohodlně jako doma – možná ještě o něco lépe.
           </p>
-          <p>Od plně vybavené kuchyně přes pohodlné spaní až po prostor pro odpočinek – vše je připraveno tak, abyste se cítili jako doma.</p>
+          <p>
+            <strong>Milovníci dobrého jídla ocení plně vybavenou kuchyni,</strong> ve které nechybí multifunkční trouba Siemens,
+            indukční varná deska, kávovar, toustovač ani rychlovarná konvice. Pro společné večery je připraven plynový
+            gril Weber a venkovní ohniště, u kterého si můžete posedět pod hvězdami.
+          </p>
+          <p>
+            O vaše pohodlí se postarají čtyři dvoulůžkové pokoje s možností tří přistýlek a tři plně vybavené koupelny.
+            Samozřejmostí jsou připravené ručníky a kvalitní tělová kosmetika Rituals, která dodá vašemu pobytu nádech
+            malého domácího wellness.
+          </p>
+          <p>
+            <strong>K nám si tak v podstatě stačí přibalit jen kartáček na zuby. A kdybyste náhodou zapomněli i ten,
+            žádný problém – pár jich máme pro jistotu v zásobě.</strong>
+          </p>
+          <p>Vy si přivezte hlavně dobrou náladu. O zbytek už jsme se postarali.</p>
         </SectionHead>
 
         <ul className="equipment__grid">
