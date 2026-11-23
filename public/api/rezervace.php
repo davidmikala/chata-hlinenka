@@ -556,17 +556,17 @@ function invoice_html(array $inv): string {
     $iban = htmlsafe((string)$seller['iban']);
     $vs = htmlsafe((string)$inv['variableSymbol']);
     $qrString = '';
-    if ((int)$inv['amount'] > 0) {
+    if ((int)$inv['amount'] > 0 && ($inv['status'] ?? '') !== 'cancelled') {
         // QR Platba podle SPAYD / ceskeho standardu; nezasila se treti strane.
         $qrString = 'SPD*1.0*ACC:'.$seller['iban'].'*AM:'.number_format((int)$inv['amount'], 2, '.', '')
             .'*CC:CZK*X-VS:'.$inv['variableSymbol'];
     }
     $jsonQr = json_encode($qrString, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    $note = $inv['type'] === 'deposit'
+    $note = ($inv['status'] ?? '') === 'cancelled' ? 'Tento doklad byl zrušen. Neprovádějte podle něj žádnou platbu.' : ($inv['type'] === 'deposit'
         ? 'Tato zálohová faktura (proforma) není daňovým dokladem. Rezervace bude potvrzena po přijetí zálohy.'
         : ($inv['type'] === 'balance'
            ? 'Doplatek podle potvrzené rezervace. Není daňovým dokladem.'
-           : 'Zúčtování zaplaceného pobytu; zbývající částka k úhradě je 0 Kč.');
+           : 'Zúčtování zaplaceného pobytu; zbývající částka k úhradě je 0 Kč.'));
     $detail = $inv['type'] === 'final'
         ? '<tr><td>Celková cena ubytování</td><td class="right">'.$total.'</td></tr>'
           .'<tr><td>Uhrazená záloha</td><td class="right">– '.$paid.'</td></tr>'
@@ -897,6 +897,7 @@ if ($action === 'resend-invoice') {
         return null;
     });
     if (!$inv || !filter_var($inv['customerEmail'] ?? '', FILTER_VALIDATE_EMAIL)) err('Doklad nebyl nalezen nebo chybí e-mail.',404);
+    if (($inv['status'] ?? '') === 'cancelled') err('Zrušený doklad nelze znovu odeslat jako platební výzvu.',409);
     $link = invoice_public_link($inv);
     $sent = send_mail_text($inv['customerEmail'], $inv['type'] === 'deposit'
             ? 'Zálohová faktura k pobytu – Chata Hliněnka'
