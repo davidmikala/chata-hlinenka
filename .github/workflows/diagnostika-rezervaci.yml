@@ -1,0 +1,140 @@
+name: Diagnostika dostupnosti rezervacniho API
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Overit verejne odpovedi API
+        shell: bash
+        run: |
+          for host in "www.chatahlinenka.cz" "chatahlinenka.cz"; do
+            endpoint="https://${host}/api/rezervace.php?action=calendar"
+            code=$(curl -sS -L --connect-timeout 12 --max-time 20 -D /tmp/hlinenka-headers.txt -o /tmp/hlinenka-response.txt -w '%{http_code}' "$endpoint" || true)
+            ctype=$(grep -i '^content-type:' /tmp/hlinenka-headers.txt | tail -1 | tr -d '\r' | cut -c1-120)
+            body=$(head -c 250 /tmp/hlinenka-response.txt | tr '\r\n' '  ' | sed 's/::/--/g')
+            echo "::notice title=HTTP ${host}::Status: ${code}; ${ctype}"
+            echo "::notice title=Response ${host}::${body}"
+            if jq -e '.ok == true and (.occupied | type == "array")' /tmp/hlinenka-response.txt >/dev/null 2>&1; then
+              echo "::notice title=API health ${host}::Response is valid and contains occupied array."
+            else
+              echo "::warning title=API health ${host}::Response is NOT the expected valid calendar JSON."
+            fi
+          done
+
+  response_type:
+    name: "API probe: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "200-html", "403", "404", "500", "503", "other-status"]
+    steps:
+      - name: Zjistit jakou odpoved vraci kalendar
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and (.occupied | type == "array")' /tmp/answer >/dev/null 2>&1
+          elif [[ "$EXPECTED" == "200-html" ]]; then
+            [[ "$code" == "200" ]] && grep -Eiq '<!doctype|<html' /tmp/answer
+          elif [[ "$EXPECTED" == "other-status" ]]; then
+            [[ ! "$code" =~ ^(200|403|404|500|503)$ ]]
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
+
+  response_reason:
+    name: "503 reason: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["folder", "file", "lock", "html", "other"]
+    steps:
+      - name: Otestovat bezpecne kterou zpravu server vraci
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          curl -sS -L --max-time 20 -o /tmp/answer 'https://www.chatahlinenka.cz/api/rezervace.php?action=calendar'
+          if [[ "$EXPECTED" == "folder" ]]; then
+            grep -Fq 'Uložiště rezervací není na hostingu přístupné' /tmp/answer
+          elif [[ "$EXPECTED" == "file" ]]; then
+            grep -Fq 'Rezervační systém není připraven k ukládání' /tmp/answer
+          elif [[ "$EXPECTED" == "lock" ]]; then
+            grep -Fq 'Uložiště je dočasně nedostupné' /tmp/answer
+          elif [[ "$EXPECTED" == "html" ]]; then
+            grep -Eiq '<!doctype|<html' /tmp/answer
+          else
+            ! grep -Eq '(Uložiště rezervací není na hostingu přístupné|Rezervační systém není připraven k ukládání|Uložiště je dočasně nedostupné|<!doctype|<html)' /tmp/answer
+          fi
+
+  php_health:
+    name: "PHP health: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "404", "500", "503"]
+    steps:
+      - name: Otestovat PHP bez nacitani rezervaci
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/api/rezervace.php?action=health' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and .service == "php"' /tmp/answer >/dev/null 2>&1
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
+
+  minimal_php:
+    name: "Minimal PHP: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "404", "500", "503", "other"]
+    steps:
+      - name: Otestovat PHP bez session a souboroveho systemu
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/api/probe.php' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and .probe == "minimal-php"' /tmp/answer >/dev/null 2>&1
+          elif [[ "$EXPECTED" == "other" ]]; then
+            [[ ! "$code" =~ ^(200|404|500|503)$ ]]
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
+
+  root_php:
+    name: "Root PHP: ${{ matrix.expected }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expected: ["200-json", "404", "500", "503", "other"]
+    steps:
+      - name: Otestovat PHP v koreni webu
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          code=$(curl -L -sS --max-time 25 -o /tmp/answer -w '%{http_code}' 'https://www.chatahlinenka.cz/probe.php' || echo '000')
+          if [[ "$EXPECTED" == "200-json" ]]; then
+            [[ "$code" == "200" ]] && jq -e '.ok == true and .probe == "root-php"' /tmp/answer >/dev/null 2>&1
+          elif [[ "$EXPECTED" == "other" ]]; then
+            [[ ! "$code" =~ ^(200|404|500|503)$ ]]
+          else
+            [[ "$code" == "$EXPECTED" ]]
+          fi
