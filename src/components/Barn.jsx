@@ -8,7 +8,7 @@ import './Barn.css';
 // pohled dovnitř stodoly
 const INSIDE = [
   { src: tableImg, alt: 'Velký dřevěný stůl ve stodole', title: 'Stůl pro celou partu' },
-  { src: kitchenImg, alt: 'Kuchyňka s vinotékou a krbovými kamny ve stodole', title: 'Kuchyňka a krbová kamna' },
+  { src: kitchenImg, alt: 'Kuchyňka s vinotékou a krbovými kamny ve stodole', title: 'Kuchyňka s vinotékou a výčepem' },
   { src: dartsImg, alt: 'Osvětlený šipkový terč s cedulí Darts Zone na dřevěné stěně stodoly', title: 'Šipky na dlouhé večery' },
 ];
 
