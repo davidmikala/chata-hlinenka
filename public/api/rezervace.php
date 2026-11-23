@@ -441,6 +441,189 @@ HTML;
     return send_mail_html_inline($email, $subject, $plain, $html, $images, OWNER_MAIL);
 }
 
+
+/**
+ * Fakturace Chaty Hlinenka; doklady a cisleni jsou ulozeny v zamcenem
+ * soukromem JSON u rezervaci, nikoli ve verejnem webovem adresari.
+ * V rezimu platce DPH je vystavovani schvalne pozastaveno, dokud neni
+ * implementovano a overeno prislusne DPH / danove doklady k platbam.
+ */
+function billing_settings(array $d): array {
+    $current = $d['billingSettings'] ?? [];
+    if (!is_array($current)) $current = [];
+    return array_merge([
+        'sellerName' => 'David Mikala',
+        'sellerAddress' => '',
+        'sellerId' => '',
+        'sellerVatId' => '',
+        'vatMode' => '',
+        'iban' => '',
+        'bankAccount' => '',
+    ], array_intersect_key($current, array_flip([
+        'sellerName','sellerAddress','sellerId','sellerVatId','vatMode','iban','bankAccount'
+    ])));
+}
+function billing_ready(array $settings): bool {
+    return trim((string)$settings['sellerName']) !== ''
+        && trim((string)$settings['sellerAddress']) !== ''
+        && preg_match('/^[0-9]{8}$/D', (string)$settings['sellerId']) === 1
+        && $settings['vatMode'] === 'nonvat'
+        && valid_cz_iban((string)$settings['iban']);
+}
+function valid_cz_iban(string $iban): bool {
+    if (preg_match('/^CZ[0-9]{22}$/D', $iban) !== 1) return false;
+    $rearranged = substr($iban, 4).'1235'.substr($iban, 2, 2);
+    $mod = 0;
+    foreach (str_split($rearranged) as $digit) $mod = ($mod * 10 + (int)$digit) % 97;
+    return $mod === 1;
+}
+function private_documents(array $d): array {
+    return array_values($d['invoices'] ?? []);
+}
+function document_number(array &$d, string $type): string {
+    $prefixes = ['deposit' => 'Z', 'balance' => 'D', 'final' => 'F'];
+    if (!isset($prefixes[$type])) throw new LogicException('Neplatny druh dokladu');
+    $year = date('Y');
+    $key = $year.'-'.$type;
+    $d['invoiceSequences'] ??= [];
+    $seq = (int)($d['invoiceSequences'][$key] ?? 0) + 1;
+    $d['invoiceSequences'][$key] = $seq;
+    return $prefixes[$type].$year.'-'.str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+}
+function create_invoice(array &$d, array $r, string $type, int $amountDue): array {
+    $settings = billing_settings($d);
+    if (!billing_ready($settings)) throw new LogicException('Neúplné fakturační údaje.');
+    $invoice = [
+        'id' => bin2hex(random_bytes(12)),
+        'token' => bin2hex(random_bytes(24)),
+        'reservationId' => $r['id'],
+        'type' => $type,
+        'number' => document_number($d, $type),
+        'issued' => date('Y-m-d'),
+        'due' => $type === 'deposit' ? date('Y-m-d', strtotime('+5 days')) : null,
+        'status' => $type === 'final' ? 'paid' : 'issued',
+        'amount' => $amountDue,
+        'total' => (int)$r['price'],
+        'depositPaid' => (int)($r['depositAmountPaid'] ?? 0),
+        'dateStart' => $r['start'],
+        'dateEnd' => $r['end'],
+        'customerName' => $r['billingName'] ?? $r['name'],
+        'customerAddress' => $r['billingAddress'] ?? '',
+        'customerEmail' => $r['email'] ?? '',
+        'variableSymbol' => $r['paymentVs'] ?? '',
+        'seller' => $settings,
+    ];
+    $d['invoices'] ??= [];
+    $d['invoices'][] = $invoice;
+    return $invoice;
+}
+function invoice_public_link(array $invoice): string {
+    return 'https://www.chatahlinenka.cz/api/rezervace.php?action=invoice-view&token='.$invoice['token'];
+}
+function invoice_record(array $d, string $reservationId, string $type): ?array {
+    foreach ($d['invoices'] ?? [] as $invoice) {
+        if (($invoice['reservationId'] ?? '') === $reservationId && ($invoice['type'] ?? '') === $type) return $invoice;
+    }
+    return null;
+}
+function money_cz(int $amount): string { return number_format($amount, 0, ',', ' ').' Kč'; }
+function date_cz(string $day): string { return (new DateTimeImmutable($day))->format('j. n. Y'); }
+function htmlsafe(string $text): string { return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function invoice_html(array $inv): string {
+    $type = match ($inv['type']) {
+        'deposit' => 'ZÁLOHOVÁ FAKTURA – VÝZVA K PLATBĚ',
+        'balance' => 'VÝZVA K ÚHRADĚ DOPLATKU',
+        'final' => 'VYÚČTOVACÍ FAKTURA',
+        default => 'DOKLAD'
+    };
+    $seller = $inv['seller'];
+    $sellerHtml = htmlsafe((string)$seller['sellerName']);
+    $addressHtml = nl2br(htmlsafe((string)$seller['sellerAddress']));
+    $ico = htmlsafe((string)$seller['sellerId']);
+    $vatLine = $seller['vatMode'] === 'nonvat' ? 'Nejsme plátci DPH.' : '';
+    $no = htmlsafe((string)$inv['number']);
+    $customer = htmlsafe((string)$inv['customerName']);
+    $customerAddress = nl2br(htmlsafe((string)$inv['customerAddress']));
+    $email = htmlsafe((string)$inv['customerEmail']);
+    $issued = date_cz((string)$inv['issued']);
+    $stay = date_cz((string)$inv['dateStart']).' – '.date_cz((string)$inv['dateEnd']);
+    $due = $inv['due'] ? date_cz((string)$inv['due']) : 'Dle platebních pokynů, nejpozději před předáním objektu';
+    if ($inv['type'] === 'final') $due = 'UHRAZENO';
+    $amount = money_cz((int)$inv['amount']);
+    $total = money_cz((int)$inv['total']);
+    $paid = money_cz((int)$inv['depositPaid']);
+    $account = htmlsafe((string)($seller['bankAccount'] ?: $seller['iban']));
+    $iban = htmlsafe((string)$seller['iban']);
+    $vs = htmlsafe((string)$inv['variableSymbol']);
+    $qrString = '';
+    if ((int)$inv['amount'] > 0 && ($inv['status'] ?? '') !== 'cancelled') {
+        // QR Platba podle SPAYD / ceskeho standardu; nezasila se treti strane.
+        $qrString = 'SPD*1.0*ACC:'.$seller['iban'].'*AM:'.number_format((int)$inv['amount'], 2, '.', '')
+            .'*CC:CZK*X-VS:'.$inv['variableSymbol'];
+    }
+    $jsonQr = json_encode($qrString, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    $note = ($inv['status'] ?? '') === 'cancelled' ? 'Tento doklad byl zrušen. Neprovádějte podle něj žádnou platbu.' : ($inv['type'] === 'deposit'
+        ? 'Tato zálohová faktura (proforma) není daňovým dokladem. Rezervace bude potvrzena po přijetí zálohy.'
+        : ($inv['type'] === 'balance'
+           ? 'Doplatek podle potvrzené rezervace. Není daňovým dokladem.'
+           : 'Zúčtování zaplaceného pobytu; zbývající částka k úhradě je 0 Kč.'));
+    $detail = $inv['type'] === 'final'
+        ? '<tr><td>Celková cena ubytování</td><td class="right">'.$total.'</td></tr>'
+          .'<tr><td>Uhrazená záloha</td><td class="right">– '.$paid.'</td></tr>'
+          .'<tr><td>Uhrazený doplatek</td><td class="right">– '.money_cz((int)$inv['total']-(int)$inv['depositPaid']).'</td></tr>'
+        : '<tr><td>'.($inv['type'] === 'deposit' ? 'Rezervační záloha 50 %' : 'Doplatek ceny pobytu').'</td><td class="right">'.$amount.'</td></tr>';
+    $qr = $qrString !== '' ? '<div class="qr"><div id="payment-qr"></div><small>Naskenujte v bankovní aplikaci</small></div>' : '';
+    return <<<HTML
+<!doctype html><html lang="cs"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>{$no} | Chata Hliněnka</title>
+<style>
+*{box-sizing:border-box}body{font:15px/1.6 Arial,sans-serif;background:#e9efe8;color:#183d29;margin:0;padding:28px}
+.paper{max-width:800px;margin:auto;background:#fff;box-shadow:0 12px 40px #1b332522;border-radius:8px;padding:42px}
+h1{font:normal 31px Georgia,serif;margin:14px 0;color:#18442e}h2{font:normal 18px Georgia,serif;color:#254f3b;margin:10px 0}
+.top,.parties,.pay{display:flex;justify-content:space-between;gap:30px}.top{border-bottom:2px solid #24563c;padding-bottom:20px;align-items:center}
+.brand{font:normal 26px Georgia,serif}.sub{color:#668170;font-size:13px}.parties>div{flex:1}
+table{width:100%;border-collapse:collapse;margin:26px 0}td{border-bottom:1px solid #e0e6df;padding:10px 5px}.right{text-align:right;font-weight:700}
+.total{background:#e7eee4;padding:18px;font-weight:700;font-size:20px;border-radius:8px}
+.pay{align-items:center;margin-top:20px;flex-wrap:wrap}.qr{min-width:185px;text-align:center}
+#payment-qr{display:flex;justify-content:center}.qr small{font-size:11px;color:#56725e}
+.note{margin-top:24px;color:#576c60;font-size:13px}.print{margin:0 0 20px;text-align:center}
+button{padding:10px 18px;border:0;border-radius:6px;background:#24563c;color:#fff;cursor:pointer;font-size:14px}
+@media(max-width:640px){body{padding:10px}.paper{padding:22px}.top,.parties{flex-direction:column;gap:12px}h1{font-size:25px}}
+@media print{body{padding:0;background:#fff}.paper{max-width:none;padding:15mm;box-shadow:none}.print{display:none}}
+</style></head><body>
+<div class="print"><button onclick="window.print()">Vytisknout / Uložit jako PDF</button></div>
+<main class="paper">
+<div class="top"><div><div class="brand">Chata Hliněnka</div><div class="sub">Hlinsko pod Hostýnem · www.chatahlinenka.cz</div></div><div class="sub">Doklad č. <strong>{$no}</strong></div></div>
+<h1>{$type}</h1>
+<div class="parties">
+<div><h2>Dodavatel</h2><strong>{$sellerHtml}</strong><br>{$addressHtml}<br>IČO: {$ico}<br>{$vatLine}</div>
+<div><h2>Odběratel</h2><strong>{$customer}</strong><br>{$customerAddress}<br>{$email}</div>
+</div>
+<table>
+<tr><td>Číslo dokladu</td><td class="right">{$no}</td></tr>
+<tr><td>Datum vystavení</td><td class="right">{$issued}</td></tr>
+<tr><td>Splatnost</td><td class="right">{$due}</td></tr>
+<tr><td>Termín pobytu</td><td class="right">{$stay}</td></tr>
+</table>
+<h2>Ubytování – Chata Hliněnka</h2>
+<table>{$detail}</table>
+<div class="total">{$type}: {$amount}</div>
+<div class="pay"><div><strong>Platební údaje</strong><br>
+Účet: {$account}<br>IBAN: {$iban}<br>Variabilní symbol: <strong>{$vs}</strong>
+<br>Částka k úhradě: <strong>{$amount}</strong><br>Potvrzení plateb: david@mikala.cz
+</div>{$qr}</div>
+<p class="note">{$note}</p>
+<p class="sub">Tento doklad byl vystaven elektronicky rezervačním systémem Chaty Hliněnka.</p>
+</main>
+<script src="/js/qrcode.min.js"></script>
+<script>
+(function(){var v={$jsonQr};if(v && typeof QRCode !== "undefined"){new QRCode(document.getElementById("payment-qr"),{text:v,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});}})();
+</script>
+</body></html>
+HTML;
+}
+
 function check_dates(string $start, string $end): int {
     if (!valid_day($start) || !valid_day($end)) err('Vyberte platná data.');
     $n = days_between($start, $end);
@@ -451,6 +634,22 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = (string)($_GET['action'] ?? 'calendar');
 
 if ($method === 'GET') {
+    if ($action === 'invoice-view') {
+        $token = (string)($_GET['token'] ?? '');
+        if (!preg_match('/^[0-9a-f]{48}$/D', $token)) err('Doklad nebyl nalezen.', 404);
+        $inv = data_store(function(array &$d, bool &$save) use ($token) {
+            foreach ($d['invoices'] ?? [] as $doc) {
+                if (hash_equals((string)($doc['token'] ?? ''), $token)) return $doc;
+            }
+            return null;
+        });
+        if ($inv === null) err('Doklad nebyl nalezen.', 404);
+        header('Content-Type: text/html; charset=utf-8');
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        header('X-Frame-Options: DENY');
+        echo invoice_html($inv);
+        exit;
+    }
     if ($action === 'calendar') {
         $view = data_store(function(array &$d, bool &$save) {
             return [
@@ -486,7 +685,9 @@ if ($method === 'GET') {
         $d = data_store(fn(array &$d, bool &$save) => $d);
         unset($d['otp'], $d['last_code_at'], $d['ip_times']);
         send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d),
-            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name()]);
+            'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name(),
+            'billingSettings' => billing_settings($d), 'billingReady' => billing_ready(billing_settings($d)),
+            'invoices' => private_documents($d)]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -629,28 +830,229 @@ if ($action === 'retry-inquiry-notice') {
     });
     send_json(['ok' => true, 'notified' => $sent]);
 }
+if ($action === 'billing-settings') {
+    $sellerName = required_text($body['sellerName'] ?? null, 150, 'dodavatel');
+    $sellerAddress = required_text($body['sellerAddress'] ?? null, 300, 'adresa dodavatele');
+    $sellerId = required_text($body['sellerId'] ?? null, 8, 'IČO');
+    if (!preg_match('/^\d{8}$/D', $sellerId)) err('IČO musí obsahovat 8 číslic.');
+    $vatMode = (string)($body['vatMode'] ?? '');
+    if (!in_array($vatMode, ['nonvat','vat'], true)) err('Vyberte, zda je ubytovatel plátce DPH.');
+    $vatId = trim((string)($body['sellerVatId'] ?? ''));
+    if (mb_strlen($vatId) > 24) err('DIČ je příliš dlouhé.');
+    if ($vatMode === 'vat' && $vatId === '') err('Plátce DPH musí vyplnit DIČ.');
+    $iban = strtoupper(preg_replace('/\s+/', '', (string)($body['iban'] ?? '')));
+    if (!valid_cz_iban($iban)) err('Zadejte platný český IBAN.');
+    $bankAccount = trim((string)($body['bankAccount'] ?? ''));
+    if (mb_strlen($bankAccount) > 80) err('Číslo bankovního účtu je příliš dlouhé.');
+    $settings = compact('sellerName','sellerAddress','sellerId','vatMode','iban','bankAccount');
+    $settings['sellerVatId'] = $vatId;
+    data_store(function(array &$d, bool &$save) use ($settings) {
+        $d['billingSettings'] = $settings;
+        $save = true;
+    });
+    send_json(['ok'=>true,'ready'=>billing_ready($settings),
+        'message'=>$vatMode==='vat'
+          ? 'Nastavení uloženo. Automatické vystavování daňových dokladů plátce DPH není aktivní; je nutné ověřit DPH režim a daňové doklady k zálohám.'
+          : 'Fakturační údaje uloženy. Automatická vystavování proformy a vyúčtování jsou připravena.']);
+}
+if ($action === 'invoice-customer') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $name = required_text($body['name'] ?? null, 150, 'fakturační jméno odběratele');
+    $address = required_text($body['address'] ?? null, 300, 'fakturační adresa odběratele');
+    data_store(function(array &$d, bool &$save) use ($id, $name, $address) {
+        foreach ($d['records'] as &$record) {
+            if (($record['id'] ?? '') !== $id) continue;
+            if (invoice_record($d, $id, 'deposit')) err('Pro již vystavené doklady nelze měnit fakturační údaje. Kontaktujte správce.', 409);
+            $record['billingName'] = $name;
+            $record['billingAddress'] = $address;
+            $save = true;
+            return null;
+        }
+        err('Rezervace nenalezena.', 404);
+    });
+    send_json(['ok'=>true]);
+}
+if ($action === 'set-agreed-price') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $price = filter_var($body['price'] ?? null, FILTER_VALIDATE_INT);
+    if ($price === false || $price < 1000 || $price > 1000000) err('Cena musí být celé Kč od 1 000 do 1 000 000.');
+    data_store(function(array &$d, bool &$save) use ($id, $price) {
+        foreach ($d['records'] as &$r) {
+            if (($r['id'] ?? '') !== $id) continue;
+            if (($r['status'] ?? '') !== 'pending' || invoice_record($d, $id, 'deposit')) {
+                err('Cenu lze upravit jen u nové poptávky před vystavením dokladu.',409);
+            }
+            $r['price'] = $price;
+            $save = true;
+            return null;
+        }
+        err('Rezervace nenalezena.',404);
+    });
+    send_json(['ok'=>true]);
+}
+if ($action === 'resend-invoice') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $inv = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['invoices'] ?? [] as $document) if (($document['id'] ?? '') === $id) return $document;
+        return null;
+    });
+    if (!$inv || !filter_var($inv['customerEmail'] ?? '', FILTER_VALIDATE_EMAIL)) err('Doklad nebyl nalezen nebo chybí e-mail.',404);
+    if (($inv['status'] ?? '') === 'cancelled') err('Zrušený doklad nelze znovu odeslat jako platební výzvu.',409);
+    $link = invoice_public_link($inv);
+    $sent = send_mail_text($inv['customerEmail'], $inv['type'] === 'deposit'
+            ? 'Zálohová faktura k pobytu – Chata Hliněnka'
+            : ($inv['type'] === 'balance' ? 'Podklady pro doplatek pobytu – Chata Hliněnka' : 'Vyúčtování pobytu – Chata Hliněnka'),
+        "Dobrý den,\n\nzasíláme vám doklad ".$inv['number']." k pobytu na Chatě Hliněnka ("
+          .$inv['dateStart']." – ".$inv['dateEnd'].").\n\nDoklad k zobrazení, tisku a uložení jako PDF:\n".$link
+          ."\n\nS pozdravem\nChata Hliněnka", OWNER_MAIL);
+    send_json(['ok'=>true,'notified'=>$sent]);
+}
+if ($action === 'record-balance') {
+    $id = required_text($body['id'] ?? null, 80, 'ID');
+    $result = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['records'] as &$r) {
+            if (($r['id'] ?? '') !== $id) continue;
+            if (($r['status'] ?? '') !== 'approved' || empty($r['depositPaidAt'])) {
+                return ['error'=>'Rezervace není potvrzena po přijetí zálohy.'];
+            }
+            if (!empty($r['balancePaidAt']) || invoice_record($d, $id, 'final')) {
+                return ['error'=>'Doplatek už je evidován.'];
+            }
+            $r['balancePaidAt'] = date(DATE_ATOM);
+            foreach ($d['invoices'] ?? [] as &$doc) {
+                if (($doc['reservationId'] ?? '') === $id && ($doc['type'] ?? '') === 'balance') {
+                    $doc['status'] = 'paid'; $doc['paidAt'] = date(DATE_ATOM);
+                }
+            }
+            unset($doc);
+            $inv = create_invoice($d, $r, 'final', 0);
+            $r['finalInvoiceId'] = $inv['id'];
+            $save = true;
+            return ['invoice'=>$inv];
+        }
+        return ['error'=>'Rezervace nenalezena.'];
+    });
+    if (isset($result['error'])) err($result['error'], 409);
+    $inv = $result['invoice'];
+    $sent = empty($inv['customerEmail']) ? false : send_mail_text(
+        $inv['customerEmail'],'Vyúčtování pobytu – Chata Hliněnka',
+        "Dobrý den,\n\npotvrzujeme přijetí doplatku za pobyt na Chatě Hliněnka.\n"
+          ."Vaše vyúčtovací faktura ".$inv['number']." je vystavená, zbývá uhradit 0 Kč.\n\n"
+          ."Doklad: ".invoice_public_link($inv)."\n\nTěšíme se na vás!\nChata Hliněnka", OWNER_MAIL);
+    send_json(['ok'=>true,'notified'=>$sent,'invoice'=>$inv['number']]);
+}
+
 if ($action === 'decision') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $status = (string)($body['status'] ?? '');
-    if (!in_array($status, ['approved', 'rejected'], true)) err('Neznámý stav.');
+    if (!in_array($status, ['awaiting_deposit', 'approved', 'rejected'], true)) err('Neznámý stav.');
     $result = data_store(function(array &$d, bool &$save) use ($id, $status) {
         foreach ($d['records'] as &$r) {
-            if ($r['id'] !== $id) continue;
-            if ($status === 'approved' && overlaps($d['records'], $r['start'], $r['end'], $id)) return ['error' => 'Termín se překrývá s potvrzenou rezervací.'];
-            $r['status'] = $status; $r['updatedAt'] = date(DATE_ATOM); $save = true;
-            return ['record' => $r];
+            if (($r['id'] ?? '') !== $id) continue;
+            $current = (string)($r['status'] ?? 'pending');
+            $validTransition = match ($status) {
+                'awaiting_deposit' => $current === 'pending',
+                'approved' => $current === 'awaiting_deposit',
+                'rejected' => in_array($current, ['pending', 'awaiting_deposit', 'approved'], true),
+                default => false
+            };
+            if (!$validTransition) return ['error'=>'Tuto změnu stavu nelze provést.'];
+            if ($status === 'approved' && overlaps($d['records'] ?? [], $r['start'], $r['end'], $id)) {
+                return ['error'=>'Termín mezitím potvrdila jiná rezervace. Platbu je nutné individuálně vypořádat.'];
+            }
+            if ($status === 'rejected' && !empty($r['depositPaidAt'])) {
+                return ['error'=>'Zaplacenou rezervaci je třeba nejprve individuálně vypořádat včetně případného storna a dokladů.'];
+            }
+            $invoice = null;
+            if ($status === 'awaiting_deposit') {
+                $settings = billing_settings($d);
+                if (!billing_ready($settings)) {
+                    return ['error'=>'Nejprve vyplňte úplné fakturační údaje, IBAN a režim DPH v administraci. Automatická fakturace zatím podporuje pouze ověřený režim neplátce DPH.'];
+                }
+                if (!isset($r['price']) || !is_numeric($r['price']) || (int)$r['price'] < 1) {
+                    return ['error'=>'U této poptávky nejprve nastavte písemně dohodnutou celkovou cenu pobytu.'];
+                }
+                if (empty($r['billingAddress'])) {
+                    return ['error'=>'Nejprve doplňte fakturační jméno a adresu odběratele.'];
+                }
+                if (invoice_record($d, $id, 'deposit')) return ['error'=>'Zálohová faktura už existuje.'];
+                $year = date('Y');
+                $d['paymentSequences'] ??= [];
+                $d['paymentSequences'][$year] = (int)($d['paymentSequences'][$year] ?? 0) + 1;
+                if ($d['paymentSequences'][$year] > 999999) return ['error'=>'Vyčerpána číselná řada plateb.'];
+                $r['paymentVs'] = $year.str_pad((string)$d['paymentSequences'][$year], 6, '0', STR_PAD_LEFT);
+                $invoice = create_invoice($d, $r, 'deposit', intdiv((int)$r['price']+1, 2));
+                $r['invoiceDepositId'] = $invoice['id'];
+            }
+            if ($status === 'approved') {
+                $deposit = invoice_record($d, $id, 'deposit');
+                if (!$deposit) return ['error'=>'Chybí vystavená zálohová faktura.'];
+                $r['depositPaidAt'] = date(DATE_ATOM);
+                $r['depositAmountPaid'] = (int)$deposit['amount'];
+                foreach ($d['invoices'] as &$doc) {
+                    if (($doc['id'] ?? '') === $deposit['id']) {
+                        $doc['status'] = 'paid'; $doc['paidAt'] = date(DATE_ATOM);
+                        break;
+                    }
+                }
+                unset($doc);
+                $invoice = create_invoice($d, $r, 'balance', (int)$r['price']-(int)$deposit['amount']);
+                $r['invoiceBalanceId'] = $invoice['id'];
+            }
+            if ($status === 'rejected') {
+                foreach ($d['invoices'] ?? [] as &$doc) {
+                    if (($doc['reservationId'] ?? '') === $id && ($doc['status'] ?? '') === 'issued') {
+                        $doc['status'] = 'cancelled';
+                    }
+                }
+                unset($doc);
+            }
+            $r['status'] = $status;
+            $r['updatedAt'] = date(DATE_ATOM);
+            $save = true;
+            return ['record'=>$r,'invoice'=>$invoice];
         }
-        return ['error' => 'Rezervace nebyla nalezena.'];
+        return ['error'=>'Rezervace nebyla nalezena.'];
     });
-    if (isset($result['error'])) err($result['error'], 409);
+    if (isset($result['error'])) err($result['error'],409);
     $r = $result['record'];
-    $mailSent = true;
+    $invoice = $result['invoice'];
+    $sent = true;
     if (!empty($r['email'])) {
-        $text = ($status === 'approved' ? "Potvrzujeme váš termín pobytu" : "Bohužel nemůžeme potvrdit vámi poptávaný termín")
-            ." na Chatě Hliněnka: ".$r['start']." až ".$r['end'].".\n\nNa podrobnostech se domluvíme e-mailem nebo telefonicky.\nChata Hliněnka";
-        $mailSent = send_mail_text($r['email'], $status === 'approved' ? 'Potvrzení pobytu – Chata Hliněnka' : 'Poptávka pobytu – Chata Hliněnka', $text, OWNER_MAIL);
+        if ($status === 'awaiting_deposit') {
+            $text = "Dobrý den,\n\nVaši poptávku na Chatu Hliněnka jsme předběžně odsouhlasili a zasíláme "
+              ."platební podklady k rezervaci termínu ".$r['start']." až ".$r['end'].".\n\n"
+              ."Zálohová faktura č. ".$invoice['number']."\n"
+              ."Záloha (50 % ceny pobytu): ".money_cz((int)$invoice['amount'])."\n"
+              ."Splatnost: ".date_cz($invoice['due'])." (5 kalendářních dnů)\n"
+              ."Variabilní symbol: ".$invoice['variableSymbol']."\n\n"
+              ."Faktura s QR platbou – otevřít, vytisknout nebo uložit jako PDF:\n"
+              .invoice_public_link($invoice)."\n\n"
+              ."Rezervace se stane závaznou až po vašem odsouhlasení nabídky a našem písemném potvrzení. "
+              ."To zašleme po připsání zálohy na účet.\n\nS pozdravem\nChata Hliněnka";
+            $sent = send_mail_text($r['email'], 'Zálohová faktura k rezervaci – Chata Hliněnka', $text, OWNER_MAIL);
+        } elseif ($status === 'approved') {
+            $text = "Dobrý den,\n\npotvrzujeme váš termín pobytu na Chatě Hliněnka: "
+              .$r['start']." až ".$r['end'].".\n\n"
+              ."Záloha ".money_cz((int)$r['depositAmountPaid'])." byla přijata. "
+              ."Termín je potvrzen a veden jako obsazený.\n\n"
+              ."Zbývající doplatek: ".money_cz((int)$invoice['amount']).". "
+              ."Uhraďte jej dle platebních pokynů, nejpozději před předáním chaty.\n\n"
+              ."Podklady k doplatku včetně QR platby: ".invoice_public_link($invoice)."\n\n"
+              ."Na dalších podrobnostech se domluvíme e-mailem nebo telefonicky.\nChata Hliněnka";
+            $sent = send_mail_text($r['email'], 'Potvrzení pobytu – Chata Hliněnka', $text, OWNER_MAIL);
+        } else {
+            $text = "Bohužel nemůžeme potvrdit vámi poptávaný termín na Chatě Hliněnka: "
+                .$r['start']." až ".$r['end'].".\n\nNa podrobnostech se domluvíme e-mailem nebo telefonicky.\nChata Hliněnka";
+            $sent = send_mail_text($r['email'], 'Poptávka pobytu – Chata Hliněnka', $text, OWNER_MAIL);
+        }
     }
-    send_json(['ok' => true, 'notified' => $mailSent]);
+    if ($status === 'awaiting_deposit') {
+        send_json(['ok'=>true, 'notified'=>$sent, 'invoice'=>$invoice['number'],
+            'message'=>$sent ? 'Zálohová faktura vystavena a e-mail předán poštovní službě. Termín není blokován.'
+                            : 'Zálohová faktura vystavena, ale e-mail se nepodařilo předat. Otevřete doklad a odešlete jej ručně.']);
+    }
+    send_json(['ok'=>true,'notified'=>$sent]);
 }
 if ($action === 'block') {
     $start = (string)($body['start'] ?? ''); $end = (string)($body['end'] ?? '');
@@ -668,6 +1070,9 @@ if ($action === 'block') {
 if ($action === 'delete') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $r = data_store(function(array &$d, bool &$save) use ($id) {
+        foreach ($d['invoices'] ?? [] as $inv) {
+            if (($inv['reservationId'] ?? '') === $id) err('Rezervaci s vystaveným dokladem nelze smazat. Doklady musí zůstat v evidenci.',409);
+        }
         $old = count($d['records']);
         $d['records'] = array_values(array_filter($d['records'], fn($r) => ($r['id'] ?? '') !== $id));
         $save = count($d['records']) < $old; return $save;

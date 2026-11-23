@@ -93,3 +93,8 @@ jobs:
           code=$(curl -L -sS --connect-timeout 15 --max-time 25 -D /tmp/maphdr -o /tmp/mapbody -w '%{http_code}' "$url" || echo "000")
           echo "::notice title=Mapy.com embed::HTTP status: ${code}"
           test "$code" = 200
+
+
+      - name: Otestovat fakturacni cyklus a lokalni QR platbu
+        shell: bash
+        run: bash scripts/test-invoices.sh

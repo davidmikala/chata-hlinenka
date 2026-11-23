@@ -17,17 +17,23 @@ h1,h2,h3{font-family:Georgia,serif;font-weight:400}h1{font-size:36px}h2{font-siz
 button,.btn{border:1px solid var(--green);border-radius:7px;background:var(--green);color:white;padding:10px 16px;font:inherit;cursor:pointer}
 button:hover{filter:brightness(.88)}button:disabled{opacity:.5;cursor:default}
 .secondary{background:white;color:var(--green);border-color:#b8cabb}.danger{background:#fff;color:var(--red);border-color:#d8a49e}
-input,textarea{width:100%;border:1px solid #cdd6cc;border-radius:6px;background:white;color:#263c2c;font:inherit;padding:10px}
+input,textarea,select{width:100%;border:1px solid #cdd6cc;border-radius:6px;background:white;color:#263c2c;font:inherit;padding:10px}
 label{display:block;font-size:13px;font-weight:600;color:#435948}
 label input,label textarea{margin-top:5px}small,.muted{color:#667468}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.kpi{background:#edf2ec;border-radius:10px;padding:20px}.kpi b{display:block;font:34px Georgia,serif}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{background:#edf2ec;border-radius:10px;padding:20px}.kpi b{display:block;font:34px Georgia,serif}
 .record{padding:18px 0;border-top:1px solid var(--line)}.record p{margin:6px 0;font-size:13px;overflow-wrap:anywhere}
 .record .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .status{display:inline-block;padding:3px 9px;border-radius:99px;background:#ede8c8;color:#6b5819;font-size:12px}
-.status.approved{background:#d8ebd9;color:#236033}.status.rejected{background:#eee4e1;color:#754c43}
+.status.approved{background:#d8ebd9;color:#236033}.status.awaiting_deposit{background:#fff0cf;color:#7b521a}.status.rejected{background:#eee4e1;color:#754c43}
 .price-row{display:grid;grid-template-columns:2fr 1.3fr 1.3fr 1fr 1fr auto;gap:10px;align-items:end;margin:11px 0}
 .price-row label{min-width:0}.price-row input{min-width:0}
-.notice{background:#edf2e9;border-radius:8px;padding:13px 15px;margin:18px 0}.warning{color:#a33f32}
+.notice{background:#edf2e9;border-radius:8px;padding:13px 15px;margin:18px 0}
+.invoice-list{margin:9px 0 15px;padding:10px;background:#f6f7f2;border-radius:7px}
+.invoice-list a{color:#1b5136;font-weight:600;text-decoration:underline}
+.invoice-list p{margin:5px 0}
+.invoice-list .row{gap:10px}
+#billingStatus{font-size:14px}
+.panel h3{margin:12px 0}.warning{color:#a33f32}
 .hidden{display:none!important}#feedback{margin-top:12px}#code{max-width:220px}
 footer{padding:20px;text-align:center;color:#758175;font-size:12px}
 @media(max-width:780px){.grid,.grid2,.kpis{grid-template-columns:1fr}.price-row{grid-template-columns:1fr 1fr}.price-row label:first-child{grid-column:1/-1}.panel{padding:17px}header strong{font-size:23px}}
@@ -50,11 +56,29 @@ footer{padding:20px;text-align:center;color:#758175;font-size:12px}
 </div>
 <div id="admin" class="hidden">
   <div class="row" style="justify-content:space-between">
-    <div><h1>Správa rezervací</h1><p class="muted">Poptávky, potvrzené termíny, ceník a iCal</p></div>
+    <div><h1>Správa rezervací</h1><p class="muted">Poptávky, čekání na zálohu, potvrzené termíny, ceník a iCal</p></div>
     <button class="secondary" id="logout">Odhlásit</button>
   </div>
   <div class="kpis" id="kpis"></div>
-  <section class="panel"><h2>Poptávky a rezervace</h2><p class="notice" id="mailStatus">Kontroluji nastavení e-mailových upozornění…</p><div id="records"></div></section>
+  <section class="panel">
+    <h2>Fakturační údaje a automatické doklady</h2>
+    <p id="billingStatus" class="notice">Načítám fakturační nastavení…</p>
+    <p class="muted">Dodavatelem je skutečný provozovatel Chaty Hliněnka, nikoli automaticky firma MIKALA. Bankovní údaje a IČO je třeba vyplnit před vystavením první faktury. Zálohová faktura = proforma, po přijetí zálohy se vystaví podklady pro doplatek. Po potvrzení doplatku vznikne vyúčtovací faktura.</p>
+    <form id="billingForm">
+      <div class="grid2">
+        <label>Jméno / název ubytovatele<input id="sellerName" required maxlength="150" value="David Mikala"></label>
+        <label>IČO ubytovatele<input id="sellerId" required maxlength="8" inputmode="numeric" placeholder="8 číslic"></label>
+        <label>Adresa sídla / podnikání<textarea id="sellerAddress" rows="2" required maxlength="300" placeholder="Ulice, číslo, PSČ, obec"></textarea></label>
+        <label>Režim DPH<select id="vatMode" required><option value="">Vyber režim</option><option value="nonvat">Neplátce DPH</option><option value="vat">Plátce DPH – automatické vystavení zatím blokováno</option></select></label>
+        <label>DIČ (je-li přiděleno)<input id="sellerVatId" maxlength="24" placeholder="CZ…"></label>
+        <label>Číslo bankovního účtu pro zobrazení na faktuře<input id="bankAccount" maxlength="80" placeholder="např. 123456789/0100"></label>
+        <label>IBAN pro QR platbu<input id="iban" required maxlength="34" placeholder="CZ…"></label>
+      </div>
+      <p class="muted">QR platba vzniká místně v prohlížeči, bez předání platebních údajů externímu generátoru. Formulář ukládá údaje jen do soukromého úložiště rezervací.</p>
+      <p><button type="submit">Uložit fakturační údaje</button></p>
+    </form>
+  </section>
+  <section class="panel"><h2>Poptávky a rezervace</h2><p class="muted">Stav „Čeká na úhradu zálohy“ je pouze interní a termín neblokuje. Ve veřejném kalendáři se zobrazují až definitivně potvrzené rezervace.</p><p class="notice" id="mailStatus">Kontroluji nastavení e-mailových upozornění…</p><div id="records"></div></section>
   <section class="panel">
     <h2>Ruční blokace termínu</h2>
     <form id="blockForm">
@@ -117,14 +141,33 @@ async function refresh(){
     byId('mailStatus').textContent='Příjemce upozornění: '+(d.notificationRecipient||'david@mikala.cz')
       +' · Způsob odeslání: '+(d.mailTransport==='smtp'?'Ověřené SMTP':'PHP mail (doručení nemusí být spolehlivé)')
       +'. Stav níže ukazuje pouze předání poštovní službě, nikoliv potvrzené doručení.';
-    byId('kpis').innerHTML=[['Čeká na schválení','pending'],['Potvrzeno','approved'],['Zamítnuto','rejected']].map(([label,status])=>'<div class="kpi">'+label+'<b>'+records.filter(r=>r.status===status).length+'</b></div>').join('');
+    byId('kpis').innerHTML=[['Nové poptávky','pending'],['Čeká na zálohu','awaiting_deposit'],['Potvrzeno','approved'],['Zamítnuto','rejected']].map(([label,status])=>'<div class="kpi">'+label+'<b>'+records.filter(r=>r.status===status).length+'</b></div>').join('');
+    const settings=d.billingSettings||{};
+    for (const key of ['sellerName','sellerAddress','sellerId','sellerVatId','vatMode','iban','bankAccount']) {
+      byId(key).value=settings[key]||'';
+    }
+    byId('billingStatus').textContent=d.billingReady
+      ? 'Fakturace je připravena. Zálohové faktury se budou vystavovat automaticky při přesunu do stavu „Čeká na zálohu“.'
+      : settings.vatMode==='vat'
+        ? 'Plátce DPH: automatické vystavování je z bezpečnostních důvodů pozastavené, dokud nebude ověřeno správné účtování DPH a dokladů k přijatým platbám.'
+        : 'Fakturace není aktivní. Doplňte a uložte správné údaje ubytovatele, IČO, režim DPH a český IBAN.';
+    const docs=d.invoices||[];
     byId('records').innerHTML=records.length ? [...records].reverse().map(r=>{
-      const status=({pending:'Čeká',approved:'Potvrzeno',rejected:'Zamítnuto'})[r.status]||r.status;
+      const status=({pending:'Nová poptávka',awaiting_deposit:'Čeká na úhradu zálohy',approved:'Potvrzeno',rejected:'Zamítnuto'})[r.status]||r.status;
+      const ownDocs=docs.filter(doc=>doc.reservationId===r.id);
+      const invoices=ownDocs.length?'<div class="invoice-list"><strong>Doklady k pobytu</strong>'+ownDocs.map(doc=>
+        '<div class="row"><a target="_blank" rel="noopener noreferrer" href="/api/rezervace.php?action=invoice-view&amp;token='+escapeHtml(doc.token)+'">'+escapeHtml(doc.number)+'</a>'+
+        '<span>'+({deposit:'Zálohová faktura (50 %)',balance:'Výzva k doplatku',final:'Vyúčtovací faktura'})[doc.type]+' · '+money(doc.amount)+' · '+({issued:'Vystaveno',paid:'Zaplaceno',cancelled:'Zrušeno'})[doc.status]+'</span>'+
+        '<button class="secondary" data-act="resend-invoice" data-id="'+escapeHtml(doc.id)+'">Znovu poslat</button></div>').join('')+'</div>':'';
       return '<div class="record"><div class="top"><strong>'+escapeHtml(r.name)+'</strong><span class="status '+escapeHtml(r.status)+'">'+escapeHtml(status)+'</span></div>'+
        '<p>'+pretty(r.start)+' – '+pretty(r.end)+' · '+escapeHtml(r.people??'')+' osob · '+escapeHtml(r.source??'')+'</p>'+
        '<p>'+escapeHtml(r.email??'')+' '+escapeHtml(r.phone??'')+'</p><p>'+money(r.price)+' · '+escapeHtml(r.message??'')+'</p>'+
+       '<p><b>Fakturační údaje:</b> '+escapeHtml(r.billingName||r.name)+' · '+escapeHtml(r.billingAddress||'Adresa dosud nevyplněna')+'</p>'+
        (r.source==='Web'?'<p><b>Upozornění e-mailem: '+(r.emailNoticeStatus==='accepted'?'Předáno poštovní službě (doručení neověřeno)':r.emailNoticeStatus==='failed'?'Odeslání selhalo':'Bez potvrzeného odeslání')+'</b></p>':'')+
-       '<div class="row">'+(r.status==='pending'?'<button data-act="approved" data-id="'+escapeHtml(r.id)+'">Schválit</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='approved'?'<button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zrušit termín</button>':'')+
+       invoices+
+       '<div class="row">'+(r.status==='pending'?'<button data-act="awaiting_deposit" data-id="'+escapeHtml(r.id)+'">Odsouhlasit nabídku – vystavit zálohu</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='awaiting_deposit'?'<button data-act="approved" data-id="'+escapeHtml(r.id)+'">Záloha přijata – potvrdit</button><button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zamítnout</button>':r.status==='approved'?'<button class="danger" data-act="rejected" data-id="'+escapeHtml(r.id)+'">Zrušit termín</button>':'')+
+       (r.status==='pending'?'<button class="secondary" data-act="invoice-customer" data-id="'+escapeHtml(r.id)+'">Fakturační údaje hosta</button><button class="secondary" data-act="set-agreed-price" data-id="'+escapeHtml(r.id)+'">Upravit sjednanou cenu</button>':'')+
+       (r.status==='approved'&&r.invoiceBalanceId&&!r.balancePaidAt?'<button data-act="record-balance" data-id="'+escapeHtml(r.id)+'">Doplatek přijat – vystavit vyúčtování</button>':'')+
        (r.source==='Web'?'<button class="secondary" data-act="retry" data-id="'+escapeHtml(r.id)+'">Znovu poslat upozornění</button>':'')+
        '<button class="secondary" data-act="delete" data-id="'+escapeHtml(r.id)+'">Smazat záznam</button></div></div>';
     }).join(''):'<p>Zatím nejsou žádné poptávky.</p>';
@@ -143,20 +186,52 @@ byId('logout').onclick=async()=>{try{await post('logout');byId('admin').classLis
 byId('records').onclick=async(e)=>{
   const button=e.target.closest('button[data-act]');if(!button)return;
   const id=button.dataset.id,act=button.dataset.act;
-  if(act==='delete'&&!confirm('Opravdu odstranit tento záznam?'))return;
-  if(act==='rejected'&&!confirm('Opravdu zrušit/zamítnout termín?'))return;
+  if(act==='invoice-customer'){
+    const name=prompt('Jméno a příjmení / název odběratele na faktuře:');
+    if(name===null||!name.trim())return;
+    const address=prompt('Úplná fakturační adresa odběratele (ulice, číslo, PSČ, obec):');
+    if(address===null||!address.trim())return;
+    try{await post('invoice-customer',{id,name:name.trim(),address:address.trim()});feedback('Fakturační údaje odběratele uloženy.');await refresh();}catch(err){feedback(err.message,true);}
+    return;
+  }
+  if(act==='set-agreed-price'){
+    const value=prompt('Celková písemně sjednaná cena pobytu v Kč (před vystavením zálohy):');
+    if(value===null)return;
+    if(!/^\d+$/.test(value.trim())){feedback('Zadejte cenu v celých Kč.',true);return;}
+    try{await post('set-agreed-price',{id,price:Number(value.trim())});feedback('Cena uložena.');await refresh();}catch(err){feedback(err.message,true);}
+    return;
+  }
+  if(act==='delete'&&!confirm('Opravdu odstranit tento záznam? Rezervace s fakturami nelze mazat.'))return;
+  if(act==='rejected'&&!confirm('Opravdu zrušit/zamítnout termín? Pokud už vznikly doklady, zůstanou v evidenci.'))return;
   if(act==='retry'&&!confirm('Znovu odeslat upozornění na david@mikala.cz?'))return;
+  if(act==='resend-invoice'&&!confirm('Znovu poslat odkaz na doklad zákazníkovi?'))return;
+  if(act==='awaiting_deposit'&&!confirm('Odsouhlasili jste se zákazníkem celkovou cenu a nabídku? Automaticky se vystaví zálohová faktura na 50 % ceny se splatností 5 kalendářních dnů a odešle se zákazníkovi. Termín NEBUDE blokován.'))return;
+  if(act==='approved'&&!confirm('Je 50% záloha skutečně připsaná na účet? Potvrzením se termín zapíše jako obsazený, odešle se potvrzení a podklady k doplatku.'))return;
+  if(act==='record-balance'&&!confirm('Je zbývajících 50 % ceny skutečně připsáno na účet? Vystaví se vyúčtovací faktura a odešle zákazníkovi.'))return;
   try{
     if(act==='retry'){
       const d=await post('retry-inquiry-notice',{id});
       feedback(d.notified===false?'Poštovní služba upozornění nepřijala. Ověřte SMTP a záznam poptávky.':'Upozornění předáno poštovní službě, doručení není potvrzené.',d.notified===false);
+    }else if(act==='resend-invoice'){
+      const d=await post('resend-invoice',{id});
+      feedback(d.notified?'Odkaz na doklad znovu odeslán.':'E-mail se nepodařilo odeslat, doklad lze otevřít přímo v administraci.',!d.notified);
     }else{
-      const d=await post(act==='delete'?'delete':'decision',act==='delete'?{id}:{id,status:act});
-      feedback(d.notified===false?'Změna uložena, ale potvrzovací e-mail se nepodařilo odeslat.':'Změna uložena.');
+      const d=await post(act==='delete'?'delete':act==='record-balance'?'record-balance':'decision',
+        act==='delete'||act==='record-balance'?{id}:{id,status:act});
+      if(d.notified===false)feedback('Změna a doklady jsou uložené, ale e-mail zákazníkovi se nepodařilo odeslat. Otevřete doklad a odešlete jej ručně.',true);
+      else if(act==='awaiting_deposit')feedback(d.message||'Zálohová faktura vystavena. Veřejný kalendář zůstává volný.');
+      else feedback(act==='approved'?'Rezervace potvrzena a termín obsazený. Podklady k doplatku byly vytvořeny.':act==='record-balance'?'Doplatek zaevidován a vyúčtovací faktura vystavena.':'Změna uložena.');
     }
     await refresh();
-  }catch(e){feedback(e.message,true);}
+  }catch(err){feedback(err.message,true);}
 };
+byId('billingForm').onsubmit=async(e)=>{
+  e.preventDefault();
+  const payload={};
+  for(const key of ['sellerName','sellerAddress','sellerId','sellerVatId','vatMode','iban','bankAccount'])payload[key]=byId(key).value.trim();
+  try{const d=await post('billing-settings',payload);feedback(d.message,!d.ready);await refresh();}catch(err){feedback(err.message,true);}
+};
+
 byId('blockForm').onsubmit=async(e)=>{
   e.preventDefault();try{await post('block',{start:byId('bs').value,end:byId('be').value,name:byId('bn').value});e.target.reset();feedback('Termín je zablokovaný.');await refresh();}catch(e){feedback(e.message,true);}
 };
