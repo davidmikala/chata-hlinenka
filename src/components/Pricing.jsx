@@ -36,10 +36,10 @@ const SEASONS = [
     img: holidayImg,
     alt: 'Večerní posezení u velkého stolu ve stodole',
     prices: [
-      { label: 'Vánoční pobyt', value: 'Na vyžádání' },
+      { label: 'Vánoční pobyt', value: '35 000 Kč' },
       { label: 'Silvestr 29. 12. 2026 – 3. 1. 2027', value: '40 000 Kč' },
     ],
-    hint: 'Pevná cena 40 000 Kč za libovolných 1–5 nocí v tomto období. Vánoční termíny na vyžádání.',
+    hint: 'Silvestr 29. 12. 2026 – 3. 1. 2027: pevná cena 40 000 Kč za 1–5 nocí.',
   },
 ];
 
