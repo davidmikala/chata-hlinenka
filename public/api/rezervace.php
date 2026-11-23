@@ -632,18 +632,37 @@ if ($action === 'retry-inquiry-notice') {
 if ($action === 'decision') {
     $id = required_text($body['id'] ?? null, 80, 'ID');
     $status = (string)($body['status'] ?? '');
-    if (!in_array($status, ['approved', 'rejected'], true)) err('Neznámý stav.');
+    if (!in_array($status, ['awaiting_deposit', 'approved', 'rejected'], true)) err('Neznámý stav.');
     $result = data_store(function(array &$d, bool &$save) use ($id, $status) {
         foreach ($d['records'] as &$r) {
             if ($r['id'] !== $id) continue;
-            if ($status === 'approved' && overlaps($d['records'], $r['start'], $r['end'], $id)) return ['error' => 'Termín se překrývá s potvrzenou rezervací.'];
-            $r['status'] = $status; $r['updatedAt'] = date(DATE_ATOM); $save = true;
+            $current = (string)($r['status'] ?? 'pending');
+            // Mezikrok je pouze interni. Verejny kalendar a iCal zobrazuji jen status approved.
+            $validTransition = match ($status) {
+                'awaiting_deposit' => $current === 'pending',
+                'approved' => $current === 'awaiting_deposit',
+                'rejected' => in_array($current, ['pending', 'awaiting_deposit', 'approved'], true),
+                default => false,
+            };
+            if (!$validTransition) return ['error' => 'Tuto změnu stavu nelze provést. Zkontrolujte, zda je nejprve nastavena fáze čekání na zálohu.'];
+            if ($status === 'approved' && overlaps($d['records'], $r['start'], $r['end'], $id)) {
+                return ['error' => 'Termín už byl mezitím potvrzen pro jinou rezervaci.'];
+            }
+            $r['status'] = $status;
+            $r['updatedAt'] = date(DATE_ATOM);
+            $save = true;
             return ['record' => $r];
         }
         return ['error' => 'Rezervace nebyla nalezena.'];
     });
     if (isset($result['error'])) err($result['error'], 409);
     $r = $result['record'];
+    // Faze cekani na zalohu neposila hostovi email a nezobrazuje se v obsazenem kalendari.
+    // Platebni pokyny odesila provozovatel rucne; potvrzeni pobytu az po prijeti zalohy.
+    if ($status === 'awaiting_deposit') {
+        send_json(['ok' => true, 'notified' => null,
+            'message' => 'Poptávka čeká na úhradu zálohy. Termín zůstává ve veřejném kalendáři volný. Platební pokyny odešlete zákazníkovi zvlášť.']);
+    }
     $mailSent = true;
     if (!empty($r['email'])) {
         $text = ($status === 'approved' ? "Potvrzujeme váš termín pobytu" : "Bohužel nemůžeme potvrdit vámi poptávaný termín")
