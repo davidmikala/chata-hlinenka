@@ -27,6 +27,10 @@ function quote(pricing, start, end) {
   if (!start || !end || end <= start) return null;
   const nights = dateDiff(start, end);
   if (!Number.isInteger(nights) || nights < 1 || nights > 60) return null;
+  // Silvestr 2026/2027: pevna cena za libovolnych 1 az 5 noci v ramci terminu.
+  if (start >= '2026-12-29' && end <= '2027-01-03') {
+    return { nights, min: 1, total: 40000, type: 'newyear2026', label: 'Silvestr 2026/2027 · pevná cena' };
+  }
   const p = { ...APPROVED_PRICING, ...pricing };
   const seasons = new Set();
   for (let i = 0; i < nights; i++) {
