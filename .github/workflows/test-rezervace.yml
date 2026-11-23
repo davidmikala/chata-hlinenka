@@ -75,6 +75,13 @@ jobs:
           check_price 2027-07-03 2027-07-06 null 4
           check_price 2027-12-24 2027-12-27 null 2
           check_price 2027-06-30 2027-07-07 null 4
+          # Silvestr 29.12.2026–3.1.2027: libovolnych 1–5 noci za 40 000 Kc.
+          check_price 2026-12-29 2026-12-30 40000 1
+          check_price 2026-12-29 2027-01-03 40000 1
+          check_price 2026-12-31 2027-01-01 40000 1
+          check_price 2027-01-02 2027-01-03 40000 1
+          check_price 2026-12-28 2027-01-03 null 2
+          check_price 2026-12-29 2027-01-04 null 2
 
 
       - name: Ověřit nový turistický podklad a e-mailová upozornění v kódu
