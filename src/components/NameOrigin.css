@@ -106,7 +106,6 @@
 /* ---------- fotografie ---------- */
 .origin__media {
   position: relative;
-  padding: 0 0 70px 70px;
 }
 
 .origin__photo {
@@ -122,32 +121,13 @@
 }
 
 .origin__photo--main {
-  aspect-ratio: 4 / 5;
-}
-
-.origin__photo--small img {
-  object-fit: contain;
-}
-
-.origin__photo--small {
-  background: white;
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 46%;
   aspect-ratio: 4 / 3;
-  border: 8px solid var(--bg-light);
-  border-radius: 12px;
-  box-shadow: 0 24px 50px -30px rgba(0, 0, 0, 0.45);
 }
 
 /* ---------- responzivita ---------- */
 @media (max-width: 1100px) {
   .origin__inner {
     gap: 56px;
-  }
-  .origin__media {
-    padding: 0 0 56px 48px;
   }
 }
 
@@ -168,9 +148,6 @@
 }
 
 @media (max-width: 480px) {
-  .origin__media {
-    padding: 0 0 44px 28px;
-  }
   .origin__item {
     grid-template-columns: 44px minmax(0, 1fr);
     padding: 22px 0;
