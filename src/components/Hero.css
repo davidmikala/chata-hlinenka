@@ -80,6 +80,120 @@
   translate: -50% 0;
 }
 
+/* Nenápadné kulaté štítky po stranách titulní fotografie. */
+.hero__announcements {
+  position: absolute;
+  z-index: 2;
+  inset-inline: clamp(20px, 4vw, 72px);
+  bottom: clamp(94px, 11vh, 145px);
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  pointer-events: none;
+}
+
+.hero__announcement {
+  width: clamp(138px, 11.5vw, 166px);
+  min-width: 138px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 14px;
+  line-height: 1.24;
+  text-align: center;
+  text-decoration: none;
+  pointer-events: auto;
+  box-shadow: 0 10px 36px rgba(12, 27, 19, 0.24);
+  transition: transform 250ms ease, box-shadow 250ms ease;
+}
+
+.hero__announcement--new {
+  color: #173e2a;
+  background: #f3ecdb;
+  border: 2px solid #c6ab7a;
+  outline: 5px solid rgba(243, 236, 219, 0.22);
+  rotate: -8deg;
+}
+
+.hero__announcement--newyear {
+  color: #fff7e9;
+  background: #17412e;
+  border: 2px solid #cfae75;
+  outline: 5px solid rgba(23, 65, 46, 0.3);
+  rotate: 8deg;
+}
+
+.hero__announcement-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero__announcement strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  font-size: clamp(17px, 1.5vw, 23px);
+}
+
+.hero__announcement--newyear strong {
+  font-size: clamp(24px, 2.1vw, 31px);
+}
+
+.hero__announcement-detail {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.hero__announcement-link {
+  margin-top: 4px;
+  color: #f0d4a1;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+a.hero__announcement:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 38px rgba(12, 27, 19, 0.36);
+}
+
+a.hero__announcement:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 8px;
+}
+
+@media (max-width: 1100px) {
+  .hero__announcements {
+    position: relative;
+    inset: auto;
+    bottom: auto;
+    width: min(100%, 390px);
+    margin-top: 30px;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .hero__announcement {
+    width: clamp(132px, 18vw, 158px);
+    min-width: 132px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero__announcements { gap: 16px; margin-top: 20px; }
+  .hero__announcement { width: min(39vw, 150px); min-width: 0; padding: 10px; }
+  .hero__announcement strong { font-size: clamp(15px, 4vw, 20px); }
+  .hero__announcement--newyear strong { font-size: clamp(22px, 6vw, 29px); }
+  .hero__announcement-kicker { font-size: 9px; }
+  .hero__announcement-detail { font-size: 10px; }
+  .hero__announcement-link { font-size: 9px; }
+}
+
 /* vstupní animace hera po načtení stránky */
 .hero-in {
   display: inline-block;
