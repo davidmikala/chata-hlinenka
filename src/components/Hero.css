@@ -95,6 +95,7 @@
 
 .hero__announcement {
   width: clamp(190px, 19vw, 275px);
+  flex: 0 0 auto;
   aspect-ratio: 1;
   border-radius: 50%;
   display: flex;
