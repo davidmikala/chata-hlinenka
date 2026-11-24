@@ -102,6 +102,15 @@ jobs:
           test "$code" = 200
 
 
+      - name: Overit rozhrani obousmerne iCal synchronizace e-chalupy
+        shell: bash
+        run: |
+          grep -Fq 'echalupy-config' public/api/rezervace.php
+          grep -Fq 'echalupy_refresh' public/api/rezervace.php
+          grep -Fq 'echalupy_conflict' public/api/rezervace.php
+          grep -Fq 'Obsazené intervaly z e-chalupy.cz' public/sprava-rezervaci.html
+          grep -Fq "($r['source'] ?? '') !== 'iCal'" public/api/rezervace.php
+
       - name: Otestovat fakturacni cyklus a lokalni QR platbu
         shell: bash
         run: bash scripts/test-invoices.sh
