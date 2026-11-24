@@ -243,3 +243,90 @@ a.hero__announcement:focus-visible {
     bottom: 24px;
   }
 }
+
+/* Věrná podoba schváleného béžového kolečka NOVINKA.
+   Záměrně pouze levý štítek: pravý Silvestr ani další prvky neměnit. */
+.hero__announcement--new {
+  width: clamp(284px, 21vw, 310px);
+  padding: 24px 22px;
+  gap: 7px;
+  background: radial-gradient(circle at 32% 23%, #fff4d9, #f4debb 72%, #e8c997);
+  border: 3px solid #e9c881;
+  rotate: -11deg;
+}
+
+.hero__announcement--new .hero__announcement-kicker {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(37px, 2.85vw, 43px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.02;
+  white-space: nowrap;
+}
+
+.hero__announcement--new .hero__announcement-rule {
+  display: block;
+  width: 59%;
+  height: 3px;
+  margin: 3px auto 5px;
+  flex: 0 0 3px;
+  background: #d5a117;
+  border-radius: 50%;
+  transform: rotate(-7deg);
+}
+
+.hero__announcement--new strong {
+  font-size: clamp(25px, 1.95vw, 30px);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.hero__announcement--new .hero__announcement-detail {
+  max-width: 225px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(23px, 1.85vw, 28px);
+  font-weight: 700;
+  line-height: 1.03;
+}
+
+.hero__announcement--new .hero__announcement-sprig {
+  width: 65px;
+  height: 27px;
+  color: #94742d;
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+
+@media (min-width: 1151px) and (max-width: 1370px) {
+  .hero__announcement--new { width: 270px; gap: 5px; }
+  .hero__announcement--new .hero__announcement-kicker { font-size: 35px; }
+  .hero__announcement--new strong { font-size: 24px; }
+  .hero__announcement--new .hero__announcement-detail { font-size: 22px; }
+  .hero__announcement--new .hero__announcement-sprig { width: 57px; }
+}
+
+@media (max-width: 1150px) {
+  .hero__announcement--new {
+    width: clamp(175px, 23vw, 218px);
+    gap: 4px;
+    padding: 14px;
+  }
+  .hero__announcement--new .hero__announcement-kicker { font-size: 27px; }
+  .hero__announcement--new .hero__announcement-rule { height: 2px; flex-basis: 2px; margin: 1px auto; }
+  .hero__announcement--new strong { font-size: 21px; }
+  .hero__announcement--new .hero__announcement-detail { font-size: 19px; }
+  .hero__announcement--new .hero__announcement-sprig { width: 47px; height: 20px; }
+}
+
+@media (max-width: 600px) {
+  .hero__announcement--new {
+    width: min(42vw, 178px);
+    gap: 3px;
+    padding: 12px 9px;
+  }
+  .hero__announcement--new .hero__announcement-kicker { font-size: clamp(17px, 4.6vw, 24px); }
+  .hero__announcement--new .hero__announcement-rule { margin: 0 auto; }
+  .hero__announcement--new strong { font-size: clamp(15px, 3.8vw, 19px); }
+  .hero__announcement--new .hero__announcement-detail { font-size: clamp(13px, 3.4vw, 17px); }
+  .hero__announcement--new .hero__announcement-sprig { width: 36px; height: 16px; margin-top: 0; }
+}
