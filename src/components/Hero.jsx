@@ -57,22 +57,6 @@ export default function Hero() {
       </div>
       <div className="hero__overlay" aria-hidden="true" />
 
-      <div className="hero__announcements" aria-label="Aktuální nabídka">
-        <div className="hero__announcement hero__announcement--new hero-in" style={{ '--d': '950ms' }}>
-          <span className="hero__announcement-kicker">NOVINKA</span>
-          <strong>Nové ubytování</strong>
-          <span className="hero__announcement-detail">v Hostýnských vrších</span>
-        </div>
-        {newYearAvailable && (
-          <a className="hero__announcement hero__announcement--newyear hero-in" style={{ '--d': '1100ms' }} href="#rezervace" aria-label="Silvestr 2026 je volný, vybrat termín pobytu">
-            <span className="hero__announcement-kicker">SILVESTR 2026</span>
-            <strong>VOLNÝ!</strong>
-            <span className="hero__announcement-detail">1–5 nocí · 40 000 Kč</span>
-            <span className="hero__announcement-link">Vybrat termín <span aria-hidden="true">→</span></span>
-          </a>
-        )}
-      </div>
-
       <div className="hero__content">
         <p className="eyebrow hero__eyebrow hero-in" style={{ '--d': '200ms' }}>
           chata hliněnka · hostýnské vrchy
@@ -95,6 +79,22 @@ export default function Hero() {
         <div className="hero-in" style={{ '--d': '780ms' }}>
           <ReserveButton />
         </div>
+      </div>
+
+      <div className="hero__announcements" aria-label="Aktuální nabídka">
+        <div className="hero__announcement hero__announcement--new hero-in" style={{ '--d': '950ms' }}>
+          <span className="hero__announcement-kicker">NOVINKA</span>
+          <strong>Nové ubytování</strong>
+          <span className="hero__announcement-detail">v Hostýnských vrších</span>
+        </div>
+        {newYearAvailable && (
+          <a className="hero__announcement hero__announcement--newyear hero-in" style={{ '--d': '1100ms' }} href="#rezervace" aria-label="Silvestr 2026 je volný, vybrat termín pobytu">
+            <span className="hero__announcement-kicker">SILVESTR 2026</span>
+            <strong>VOLNÝ!</strong>
+            <span className="hero__announcement-detail">1–5 nocí · 40 000 Kč</span>
+            <span className="hero__announcement-link">Vybrat termín <span aria-hidden="true">→</span></span>
+          </a>
+        )}
       </div>
 
       <div className="hero__cue hero-in" style={{ '--d': '1000ms' }}>
