@@ -82,10 +82,17 @@ export default function Hero() {
       </div>
 
       <div className="hero__announcements" aria-label="Aktuální nabídka">
-        <div className="hero__announcement hero__announcement--new" style={{ '--d': '950ms' }}>
+        <div className="hero__announcement hero__announcement--new">
           <span className="hero__announcement-kicker">NOVINKA</span>
+          <span className="hero__announcement-rule" aria-hidden="true" />
           <strong>Nové ubytování</strong>
           <span className="hero__announcement-detail">v Hostýnských vrších</span>
+          <svg className="hero__announcement-sprig" viewBox="0 0 92 32" fill="none" aria-hidden="true" focusable="false">
+            <path d="M20 28C38 23 56 14 76 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M37 21C23 22 16 17 14 9C27 7 35 12 37 21Z" fill="currentColor"/>
+            <path d="M47 16C40 6 43 1 52 0C58 8 55 13 47 16Z" fill="currentColor"/>
+            <path d="M58 11C65 14 72 12 77 6C70 1 63 4 58 11Z" fill="currentColor"/>
+          </svg>
         </div>
         {newYearAvailable && (
           <a className="hero__announcement hero__announcement--newyear" style={{ '--d': '1100ms' }} href="#rezervace" aria-label="Silvestr 2026 je volný, vybrat termín pobytu">
