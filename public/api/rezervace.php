@@ -85,6 +85,106 @@ function overlaps(array $rows, string $start, string $end, ?string $ignore = nul
     }
     return false;
 }
+// iCal synchronizace e-chalupy Profi. Cizi rezervace uchovavame oddelene
+// od vlastnich rezervaci, nevystavujeme k nim faktury a neexportujeme je zpet.
+function echalupy_feed_url(string $input): ?string {
+    $url = trim($input);
+    if ($url === '' || strlen($url) > 2000 || preg_match('/[\x00-\x20]/', $url)) return null;
+    $parts = parse_url($url);
+    if (!is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https'
+        || isset($parts['user']) || isset($parts['pass'])
+        || isset($parts['port']) || isset($parts['fragment'])) return null;
+    $host = strtolower((string)($parts['host'] ?? ''));
+    // Jen domena e-chalupy.cz a jeji subdomeny, nikdy libovolna externa URL.
+    if ($host !== 'e-chalupy.cz' && !str_ends_with($host, '.e-chalupy.cz')) return null;
+    return $url;
+}
+function echalupy_parse_ical(string $raw): ?array {
+    if (!str_contains($raw, 'BEGIN:VCALENDAR') || !str_contains($raw, 'END:VCALENDAR')) return null;
+    $raw = preg_replace("/\r\n[ \t]|\n[ \t]/", '', str_replace("\r\n", "\n", $raw));
+    preg_match_all('/BEGIN:VEVENT\s*\n(.*?)\nEND:VEVENT/s', $raw, $matches);
+    $events = [];
+    foreach (array_slice($matches[1] ?? [], 0, 1500) as $body) {
+        if (preg_match('/^STATUS:CANCELLED\s*$/mi', $body) || preg_match('/^TRANSP:TRANSPARENT\s*$/mi', $body)) continue;
+        if (preg_match('/^UID:(.*)$/mi', $body, $uid) &&
+            str_contains(strtolower(trim($uid[1])), '@chatahlinenka.cz')) continue;
+        // Celodenni obsazenost i datum-cas; odjezd je podle iCalendar vylucny.
+        if (!preg_match('/^DTSTART(?:;[^:\n]+)?:([0-9]{8})/mi', $body, $start)
+            || !preg_match('/^DTEND(?:;[^:\n]+)?:([0-9]{8})/mi', $body, $end)) continue;
+        $a = substr($start[1], 0, 4).'-'.substr($start[1], 4, 2).'-'.substr($start[1], 6, 2);
+        $b = substr($end[1], 0, 4).'-'.substr($end[1], 4, 2).'-'.substr($end[1], 6, 2);
+        if (!valid_day($a) || !valid_day($b) || $a >= $b) continue;
+        // Pouze data: nikdy neprenasej jmena hostu z externiho feedu.
+        $events[$a.'|'.$b] = ['start'=>$a,'end'=>$b];
+    }
+    return array_values($events);
+}
+function echalupy_refresh(bool $force = false): array {
+    $settings = data_store(static function(array &$d, bool &$save): array {
+        return [
+            'url' => (string)($d['echalupyUrl'] ?? ''),
+            'lastAttempt' => (int)($d['echalupyLastAttempt'] ?? 0),
+            'count' => count($d['echalupyOccupied'] ?? []),
+            'lastOk' => (int)($d['echalupyLastOk'] ?? 0),
+            'error' => (string)($d['echalupyError'] ?? '')
+        ];
+    });
+    if ($settings['url'] === '') return ['enabled'=>false, 'count'=>0];
+    // Nespoustej sit pri kazde navsteve; maximalne 1 pokus za 10 min.
+    if (!$force && $settings['lastAttempt'] > time() - 600) {
+        return ['enabled'=>true, 'count'=>$settings['count'],
+            'lastOk'=>$settings['lastOk'],'error'=>$settings['error']];
+    }
+    data_store(static function(array &$d, bool &$save): void {
+        $d['echalupyLastAttempt'] = time(); $save = true;
+    });
+    $url = echalupy_feed_url($settings['url']);
+    if (!$url) return ['enabled'=>true, 'count'=>$settings['count'],
+        'error'=>'Neplatná adresa externího kalendáře.'];
+    $context = stream_context_create([
+        'http'=>['method'=>'GET', 'timeout'=>7, 'follow_location'=>0,
+            'header'=>"User-Agent: ChataHlinenka-iCal/1.0\r\nAccept: text/calendar\r\n"],
+        'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true],
+    ]);
+    $handle = @fopen($url, 'rb', false, $context);
+    $raw = $handle ? stream_get_contents($handle, 1000001) : false;
+    if ($handle) fclose($handle);
+    $events = is_string($raw) && strlen($raw) <= 1000000 ? echalupy_parse_ical($raw) : null;
+    if ($events !== null) {
+        $result = data_store(static function(array &$d, bool &$save) use ($url, $events): array {
+            if (($d['echalupyUrl'] ?? '') !== $url) return ['enabled'=>false, 'count'=>0];
+            $d['echalupyOccupied'] = $events;
+            $d['echalupyLastOk'] = time();
+            $d['echalupyError'] = '';
+            $save = true;
+            return ['enabled'=>true,'count'=>count($events),'lastOk'=>time(),'error'=>''];
+        });
+        return $result;
+    }
+    data_store(static function(array &$d, bool &$save): void {
+        $d['echalupyError'] = 'Kalendář se nepodařilo načíst. Používá se poslední úspěšná synchronizace.';
+        $save = true;
+    });
+    return ['enabled'=>true, 'count'=>$settings['count'], 'lastOk'=>$settings['lastOk'],
+        'error'=>'Kalendář se nepodařilo načíst. Používá se poslední úspěšná synchronizace.'];
+}
+function echalupy_conflict(array $d, string $start, string $end): bool {
+    foreach ($d['echalupyOccupied'] ?? [] as $row) {
+        if ($start < ($row['end'] ?? '') && $end > ($row['start'] ?? '')) {
+            // Zpetny import vlastni rezervace e-chalupy muze mit jine UID:
+            // shodny interval s jiz potvrzenou vlastni rezervaci ignorujeme.
+            $own = false;
+            foreach ($d['records'] ?? [] as $r) {
+                if (($r['status'] ?? '') === 'approved'
+                    && ($r['start'] ?? '') === ($row['start'] ?? '')
+                    && ($r['end'] ?? '') === ($row['end'] ?? '')) {$own = true; break;}
+            }
+            if (!$own) return true;
+        }
+    }
+    return false;
+}
+
 // Schválený ceník za celou chatu – balíčky pobytů, nikoli cena za každý den.
 // Staré orientační denní sazby z prototypu se pro výpočet nepoužívají.
 function pricing_values(array $d): array {
@@ -639,6 +739,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = (string)($_GET['action'] ?? 'calendar');
 
 if ($method === 'GET') {
+    if ($action === 'calendar' || $action === 'admin') echalupy_refresh();
     if ($action === 'invoice-view') {
         $token = (string)($_GET['token'] ?? '');
         if (!preg_match('/^[0-9a-f]{48}$/D', $token)) err('Doklad nebyl nalezen.', 404);
@@ -658,8 +759,11 @@ if ($method === 'GET') {
     if ($action === 'calendar') {
         $view = data_store(function(array &$d, bool &$save) {
             return [
-                'occupied' => array_values(array_map(fn($r) => ['start' => $r['start'], 'end' => $r['end']],
-                    array_filter($d['records'] ?? [], fn($r) => ($r['status'] ?? '') === 'approved'))),
+                'occupied' => array_values(array_merge(
+                    array_map(fn($r) => ['start' => $r['start'], 'end' => $r['end']],
+                        array_values(array_filter($d['records'] ?? [], fn($r) => ($r['status'] ?? '') === 'approved'))),
+                    $d['echalupyOccupied'] ?? []
+                )),
                 'pricing' => pricing_values($d),
             ];
         });
@@ -673,7 +777,8 @@ if ($method === 'GET') {
         send_json(['ok' => true] + $view);
     }
     if ($action === 'ical') {
-        $rows = data_store(fn(array &$d, bool &$save) => array_values(array_filter($d['records'] ?? [], fn($r) => ($r['status'] ?? '') === 'approved')));
+        $rows = data_store(fn(array &$d, bool &$save) => array_values(array_filter($d['records'] ?? [],
+            fn($r) => ($r['status'] ?? '') === 'approved' && ($r['source'] ?? '') !== 'iCal')));
         header('Content-Type: text/calendar; charset=utf-8');
         header('Content-Disposition: inline; filename="hlinenka-obsazenost.ics"');
         echo "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Chata Hlinenka//Rezervace//CS\r\nCALSCALE:GREGORIAN\r\n";
@@ -692,7 +797,11 @@ if ($method === 'GET') {
         send_json(['ok' => true, 'records' => $d['records'] ?? [], 'pricing' => pricing_values($d),
             'notificationRecipient' => OWNER_MAIL, 'mailTransport' => mail_transport_name(),
             'billingSettings' => billing_settings($d), 'billingReady' => billing_ready(billing_settings($d)),
-            'invoices' => private_documents($d)]);
+            'invoices' => private_documents($d),
+            'echalupy' => ['configured'=>!empty($d['echalupyUrl']),
+                'lastOk'=>(int)($d['echalupyLastOk'] ?? 0),
+                'count'=>count($d['echalupyOccupied'] ?? []),
+                'error'=>(string)($d['echalupyError'] ?? '')]]);
     }
     if ($action === 'session') send_json(['ok' => true, 'admin' => is_admin()]);
     err('Neznámý požadavek.', 404);
@@ -706,6 +815,9 @@ if ($origin) {
         || ($current !== '' && strcasecmp($host, explode(':', $current)[0]) !== 0)) err('Nepovolený požadavek.', 403);
 }
 $body = payload();
+
+// U verejnych poptavek pravidelne obnovit i zmeny z e-chalupy.
+if (in_array($action, ['inquiry','decision','block'], true)) echalupy_refresh();
 
 if ($action === 'inquiry') {
     $start = (string)($body['start'] ?? ''); $end = (string)($body['end'] ?? '');
@@ -722,7 +834,9 @@ if ($action === 'inquiry') {
     // Nenápadná ochrana proti botům.
     if (trim((string)($body['website'] ?? '')) !== '') send_json(['ok' => true]);
     $result = data_store(function(array &$d, bool &$save) use($start, $end, $name, $phone, $email, $people, $message, $nights) {
-        if (overlaps($d['records'] ?? [], $start, $end)) return ['error' => 'Zvolený termín je obsazený.'];
+        if (overlaps($d['records'] ?? [], $start, $end) || echalupy_conflict($d, $start, $end)) {
+            return ['error' => 'Zvolený termín je obsazený v kalendáři Chaty Hliněnka nebo e-chalupy.cz.'];
+        }
         $q = price_quote($d, $start, $end);
         if ($nights < $q['min']) return ['error' => 'Minimální délka pobytu v tomto období je '.$q['min'].' nocí.'];
         $ip = hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? ''));
@@ -962,7 +1076,9 @@ if ($action === 'decision') {
                 default => false
             };
             if (!$validTransition) return ['error'=>'Tuto změnu stavu nelze provést.'];
-            if ($status === 'approved' && overlaps($d['records'] ?? [], $r['start'], $r['end'], $id)) {
+            if ($status === 'approved' &&
+                (overlaps($d['records'] ?? [], $r['start'], $r['end'], $id)
+                 || echalupy_conflict($d, $r['start'], $r['end']))) {
                 return ['error'=>'Termín mezitím potvrdila jiná rezervace. Platbu je nutné individuálně vypořádat.'];
             }
             if ($status === 'rejected' && !empty($r['depositPaidAt'])) {
@@ -1064,7 +1180,7 @@ if ($action === 'block') {
     check_dates($start, $end);
     $name = required_text($body['name'] ?? null, 120, 'důvod');
     $result = data_store(function(array &$d, bool &$save) use ($start, $end, $name) {
-        if (overlaps($d['records'], $start, $end)) return false;
+        if (overlaps($d['records'], $start, $end) || echalupy_conflict($d, $start, $end)) return false;
         $d['records'][] = ['id' => bin2hex(random_bytes(12)), 'start' => $start, 'end' => $end,
             'name' => $name, 'status' => 'approved', 'source' => 'Ruční blokace', 'createdAt' => date(DATE_ATOM)];
         $save = true; return true;
@@ -1098,6 +1214,32 @@ if ($action === 'pricing') {
         return true;
     });
     send_json(['ok' => true]);
+}
+if ($action === 'echalupy-config') {
+    require_admin();
+    $url = trim((string)($body['url'] ?? ''));
+    if ($url !== '' && echalupy_feed_url($url) === null) {
+        err('Vložte platný HTTPS iCal odkaz z domény e-chalupy.cz.');
+    }
+    data_store(static function(array &$d, bool &$save) use ($url): void {
+        $d['echalupyUrl'] = $url;
+        $d['echalupyOccupied'] = [];
+        $d['echalupyLastAttempt'] = 0;
+        $d['echalupyLastOk'] = 0;
+        $d['echalupyError'] = '';
+        $save = true;
+    });
+    if ($url === '') send_json(['ok'=>true, 'message'=>'Propojení s e-chalupy.cz bylo vypnuto.']);
+    $sync = echalupy_refresh(true);
+    send_json(['ok'=>true, 'sync'=>$sync,
+        'message'=>empty($sync['error'])
+            ? 'iCal připojen. Načteno obsazených intervalů: '.$sync['count'].'.'
+            : 'Odkaz byl uložen, ale zatím se nepodařilo kalendář načíst. Zkontrolujte export na e-chalupy.cz.']);
+}
+if ($action === 'echalupy-sync') {
+    require_admin();
+    $sync = echalupy_refresh(true);
+    send_json(['ok'=>true,'sync'=>$sync]);
 }
 if ($action === 'import-ical') {
     $ical = (string)($body['ical'] ?? '');
