@@ -104,8 +104,17 @@ footer{padding:20px;text-align:center;color:#758175;font-size:12px}
     <p><button id="saveRates" type="button">Uložit schválený ceník</button></p>
   </section>
   <section class="panel">
-    <h2>Propojení ubytovacích portálů (iCal)</h2>
-    <p>Do portálů lze vložit níže uvedenou adresu pro automatické stahování potvrzené obsazenosti. Import externích kalendářů je zatím ruční přes soubor .ics; automatické načítání z cizích portálů ještě není nastaveno.</p>
+    <h2>Propojení s e-chalupy.cz a ostatními portály (iCal)</h2>
+    <p><strong>1. Hliněnka → e-chalupy.cz:</strong> Zkopíruj exportní URL níže do klientské sekce e-chalupy.cz → Obsazenost → Import kalendáře. Přenášejí se jen potvrzené rezervace, bez údajů hostů.</p>
+    <p><strong>2. e-chalupy.cz → Hliněnka:</strong> Na e-chalupy.cz otevři Obsazenost → Export kalendáře a zkopíruj HTTPS odkaz iCal ve variantě „včetně podrobností“. Tento odkaz vlož sem. Údaje hostů z externího feedu neukládáme, přebíráme pouze obsazené termíny.</p>
+    <label>Soukromá adresa iCal exportu z e-chalupy.cz<input id="echalupyFeed" type="url" placeholder="https://…e-chalupy.cz/…"></label>
+    <div class="row" style="margin:12px 0">
+      <button type="button" id="saveEchalupy">Uložit a načíst kalendář</button>
+      <button type="button" class="secondary" id="syncEchalupy">Načíst znovu nyní</button>
+      <button type="button" class="danger" id="disableEchalupy">Vypnout synchronizaci</button>
+    </div>
+    <p class="notice" id="echalupyStatus">Kalendář e-chalupy.cz zatím není propojený.</p>
+    <p class="muted">Obsazenost e-chalupy.cz se automaticky kontroluje maximálně jednou za 10 minut při používání kalendáře. Při výpadku portálu zůstává poslední úspěšný stav a upozornění v administraci. Vyžadované předběžné poptávky a čekání na zálohu se nepřenášejí. Import externího .ics níže je samostatná jednorázová funkce.</p>
     <label>Exportní URL kalendáře<input id="icalUrl" readonly></label>
     <div class="row" style="margin-top:15px">
       <a class="btn" href="/api/rezervace.php?action=ical" download="hlinenka-obsazenost.ics">Stáhnout iCal</a>
@@ -137,6 +146,13 @@ async function refresh(){
     const d=await get('admin');
     byId('login').classList.add('hidden');byId('admin').classList.remove('hidden');
     byId('icalUrl').value=location.origin+'/api/rezervace.php?action=ical';
+    const syncInfo=d.echalupy||{};
+    byId('echalupyFeed').placeholder=syncInfo.configured?'Odkaz je uložen; pro změnu vlož nový iCal odkaz':'https://…e-chalupy.cz/…';
+    byId('echalupyStatus').textContent=syncInfo.configured
+      ? (syncInfo.error?'Pozor: '+syncInfo.error+' · ':'')
+        +'Poslední úspěšná aktualizace: '+(syncInfo.lastOk?new Date(syncInfo.lastOk*1000).toLocaleString('cs-CZ'):'zatím žádná')
+        +' · Obsazené intervaly z e-chalupy.cz: '+(syncInfo.count||0)
+      : 'Kalendář e-chalupy.cz zatím není propojený. Ulož odkaz exportu z e-chalupy.cz.';
     const records=d.records||[];
     byId('mailStatus').textContent='Příjemce upozornění: '+(d.notificationRecipient||'david@mikala.cz')
       +' · Způsob odeslání: '+(d.mailTransport==='smtp'?'Ověřené SMTP':'PHP mail (doručení nemusí být spolehlivé)')
@@ -250,6 +266,30 @@ byId('importIcal').onclick=async()=>{
     const d=await post('import-ical',{ical:await file.text()});
     feedback('Importováno: '+d.imported+' termínů. Přeskočeno: '+d.skipped+'.');
     byId('icalFile').value='';await refresh();
+  }catch(e){feedback(e.message,true);}
+};
+byId('saveEchalupy').onclick=async()=>{
+  const url=byId('echalupyFeed').value.trim();
+  if(!url){feedback('Vlož odkaz na iCal export z e-chalupy.cz. Uložené propojení lze samostatně vypnout.',true);return;}
+  try{
+    const d=await post('echalupy-config',{url});
+    feedback(d.message,!!d.sync?.error);
+    byId('echalupyFeed').value='';
+    await refresh();
+  }catch(e){feedback(e.message,true);}
+};
+byId('syncEchalupy').onclick=async()=>{
+  try{
+    const d=await post('echalupy-sync',{});
+    feedback(d.sync?.enabled?(d.sync.error||'Kalendář e-chalupy.cz načten. Obsazených intervalů: '+d.sync.count):'Nejprve vlož odkaz na export z e-chalupy.cz.',!!d.sync?.error);
+    await refresh();
+  }catch(e){feedback(e.message,true);}
+};
+byId('disableEchalupy').onclick=async()=>{
+  if(!confirm('Opravdu vypnout propojení e-chalupy.cz? Obsazenost z externího kalendáře se přestane zobrazovat na webu.'))return;
+  try{
+    const d=await post('echalupy-config',{url:''});
+    feedback(d.message);byId('echalupyFeed').value='';await refresh();
   }catch(e){feedback(e.message,true);}
 };
 get('session').then(d=>{if(d.admin)refresh();}).catch(e=>feedback('Nelze ověřit přihlášení: '+e.message,true));
