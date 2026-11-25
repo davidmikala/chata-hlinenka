@@ -65,6 +65,24 @@ function data_store(callable $fn): mixed {
         $d = json_decode($raw ?: '', true);
         if (!is_array($d)) $d = ['records' => [], 'pricing' => ['base' => 0, 'rates' => []], 'otp' => null, 'last_code_at' => 0, 'ip_times' => []];
         $save = false;
+        // Jednorázové doplnění schválené identity ubytovatele a banky
+        // do soukromého úložiště; již vystavené doklady se nemění.
+        // DPH zůstává beze změny, do první volby jej nepředpokládáme.
+        if ((int)($d['billingIdentityRevision'] ?? 0) < 1) {
+            $billing = is_array($d['billingSettings'] ?? null) ? $d['billingSettings'] : [];
+            foreach ([
+                'sellerName' => 'David Mikala',
+                'sellerAddress' => "Míškovice 177\\n768 52 Míškovice",
+                'sellerId' => '74743881',
+                'bankAccount' => '6052704445/6363',
+                'iban' => 'CZ6363630000006052704445',
+            ] as $key => $value) {
+                $billing[$key] = $value;
+            }
+            $d['billingSettings'] = $billing;
+            $d['billingIdentityRevision'] = 1;
+            $save = true;
+        }
         $result = $fn($d, $save);
         if ($save) {
             $json = json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
