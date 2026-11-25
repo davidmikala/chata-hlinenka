@@ -556,17 +556,25 @@ HTML;
 function billing_settings(array $d): array {
     $current = $d['billingSettings'] ?? [];
     if (!is_array($current)) $current = [];
-    return array_merge([
+    // Ubytovatel potvrdil své fakturační údaje. Platný IBAN je odvozen
+    // z 6052704445/6363; skutečný režim DPH se nikdy neodhaduje.
+    // Existující vyplněná soukromá nastavení mají přednost.
+    $defaults = [
         'sellerName' => 'David Mikala',
-        'sellerAddress' => '',
-        'sellerId' => '',
+        'sellerAddress' => "Míškovice 177\n768 52 Míškovice",
+        'sellerId' => '74743881',
         'sellerVatId' => '',
         'vatMode' => '',
-        'iban' => '',
-        'bankAccount' => '',
-    ], array_intersect_key($current, array_flip([
-        'sellerName','sellerAddress','sellerId','sellerVatId','vatMode','iban','bankAccount'
-    ])));
+        'iban' => 'CZ6363630000006052704445',
+        'bankAccount' => '6052704445/6363',
+    ];
+    $settings = array_intersect_key($current, $defaults);
+    foreach ($defaults as $key => $default) {
+        if (!isset($settings[$key]) || trim((string)$settings[$key]) === '') {
+            $settings[$key] = $default;
+        }
+    }
+    return $settings;
 }
 function billing_ready(array $settings): bool {
     return trim((string)$settings['sellerName']) !== ''
