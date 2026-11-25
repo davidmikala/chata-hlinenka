@@ -29,6 +29,9 @@ get_admin() {
   curl -fsS "$API?action=admin" -H "Cookie: HLINENKA_ADMIN=$SESSION_ID"
 }
 test -f dist/js/qrcode.min.js
+test -f dist/api/vendor/autoload.php
+test -f dist/api/invoice-pdf.php
+test -f dist/api/vendor/.htaccess
 # První přístup migruje výchozí fakturační údaje skutečného ubytovatele
 # i výslovně potvrzený režim neplátce DPH. Ukládání nesmí mazat ostatní data.
 get_admin | jq -e '.billingSettings.sellerName=="David Mikala" and .billingSettings.sellerId=="74743881" and .billingSettings.bankAccount=="6052704445/6363" and .billingSettings.iban=="CZ6363630000006052704445" and .billingSettings.vatMode=="nonvat" and .billingReady==true'
@@ -52,6 +55,14 @@ grep -Fq '/email/logo-hlinenka-prirodni.jpg' "$TEMP_DIR/invoice.html"
 grep -Fq '7 Kč/kWh' "$TEMP_DIR/invoice.html"
 grep -Fq 'ZÁLOHOVÁ FAKTURA' "$TEMP_DIR/invoice.html"
 grep -Fq 'Nejsme plátci DPH.' "$TEMP_DIR/invoice.html"
+curl -fsS "$API?action=invoice-pdf&token=$INV_TOKEN" > "$TEMP_DIR/deposit.pdf"
+head -c 5 "$TEMP_DIR/deposit.pdf" | grep -q '%PDF-'
+test "$(wc -c < "$TEMP_DIR/deposit.pdf")" -gt 5000
+# Sám vytvořený PDF má být jeden A4 list a obsahuje skutečné fakturační údaje.
+pdfinfo "$TEMP_DIR/deposit.pdf" | grep -Fq 'Pages:           1'
+pdftotext "$TEMP_DIR/deposit.pdf" "$TEMP_DIR/deposit.txt"
+grep -Fq 'Chata Hliněnka' "$TEMP_DIR/deposit.txt"
+grep -Fq '10 000' "$TEMP_DIR/deposit.txt"
 request decision "$(jq -nc --arg id "$R" '{id:$id,status:"approved"}')" | jq -e '.ok==true'
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==1'
 get_admin | jq -e '.invoices|length==2'
@@ -68,4 +79,26 @@ if grep -Fq 'id="payment-qr"' "$TEMP_DIR/final.html"; then echo 'QR platba se ne
 code=$(curl -sS -o "$TEMP_DIR/delete.json" -w '%{http_code}' -H "Cookie: HLINENKA_ADMIN=$SESSION_ID" -H 'Content-Type: application/json' \
   -d "$(jq -nc --arg id "$R" '{id:$id}')" "$API?action=delete")
 test "$code" = "409"
-echo 'Fakturace: proforma, potvrzeni po zaloze, doplatek, vyuctovani i QR prosly.'
+# Pobyt objednaný nejvýše 5 dní před příjezdem: jedna faktura na 100 %.
+LAST_START=$(date -d '+2 days' +%Y-%m-%d)
+LAST_END=$(date -d '+4 days' +%Y-%m-%d)
+request inquiry "$(jq -nc --arg a "$LAST_START" --arg b "$LAST_END" '{name:"Host posledni chvile",phone:"+420123456789",email:"host@example.cz",people:2,start:$a,end:$b,message:"Last minute 100%"}')" | jq -e '.ok==true and .saved==true'
+LAST_ID=$(get_admin | jq -r '.records[]|select(.name=="Host posledni chvile")|.id')
+request invoice-customer "$(jq -nc --arg id "$LAST_ID" '{id:$id,name:"Host posledni chvile",address:"Test 10, 768 41 Bystrice pod Hostynem"}')" | jq -e '.ok==true'
+request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"awaiting_deposit"}')" | jq -e '.ok==true and .fullPayment==true'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))[0]|.type=="full" and .amount==20000 and (.number|test("^F[0-9]{4}-0002$"))'
+LAST_TOKEN=$(get_admin | jq -r --arg id "$LAST_ID" '.invoices[]|select(.reservationId==$id)|.token')
+curl -fsS "$API?action=invoice-pdf&token=$LAST_TOKEN" > "$TEMP_DIR/lastminute.pdf"
+head -c 5 "$TEMP_DIR/lastminute.pdf" | grep -q '%PDF-'
+pdftotext "$TEMP_DIR/lastminute.pdf" "$TEMP_DIR/lastminute.txt"
+grep -Fq 'FAKTURA ZA POBYT' "$TEMP_DIR/lastminute.txt"
+grep -Fq '20 000' "$TEMP_DIR/lastminute.txt"
+request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"approved"}')" | jq -e '.ok==true and .fullPayment==true'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))[0]|.type=="full" and .status=="paid"'
+curl -fsS "$API?action=calendar" | jq -e '.occupied|length==2'
+code=$(curl -sS -o "$TEMP_DIR/duplicate.json" -w '%{http_code}' -H "Cookie: HLINENKA_ADMIN=$SESSION_ID" -H 'Content-Type: application/json' \
+  -d "$(jq -nc --arg id "$LAST_ID" '{id:$id}')" "$API?action=record-balance")
+test "$code" = "409"
+echo 'Fakturace: zalohove a 100% PDF, QR, 50% doplatek i standardni vyuctovani prosly.'
