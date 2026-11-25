@@ -114,6 +114,11 @@ jobs:
           grep -Fq 'Obsazené intervaly z e-chalupy.cz' public/sprava-rezervaci.html
           grep -Fq "!== 'iCal'" public/api/rezervace.php
 
+      - name: Nainstalovat nastroje pro overeni PDF souboru
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+
       - name: Otestovat fakturacni cyklus a lokalni QR platbu
         shell: bash
         run: bash scripts/test-invoices.sh
