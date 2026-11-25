@@ -72,7 +72,7 @@ function data_store(callable $fn): mixed {
             $billing = is_array($d['billingSettings'] ?? null) ? $d['billingSettings'] : [];
             foreach ([
                 'sellerName' => 'David Mikala',
-                'sellerAddress' => "Míškovice 177\\n768 52 Míškovice",
+                'sellerAddress' => "Míškovice 177\n768 52 Míškovice",
                 'sellerId' => '74743881',
                 'bankAccount' => '6052704445/6363',
                 'iban' => 'CZ6363630000006052704445',
