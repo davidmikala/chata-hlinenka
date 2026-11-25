@@ -414,6 +414,60 @@ function send_mail_text(string $to, string $subject, string $message, ?string $r
     if (!$accepted) error_log('Hlinenka: PHP mail() neprevzal zpravu');
     return $accepted;
 }
+/**
+ * E-mail s opravdovým souborem PDF jako přílohou. Použije stejné SMTP
+ * nebo PHP mail() jako ostatní zprávy. Nikdy neposílá jen odkaz
+ * při selhání výroby PDF – správce musí dostat chybu a může akci opakovat.
+ */
+function send_mail_pdf_attachment(
+    string $to, string $subject, string $plain,
+    string $pdfBytes, string $fileName, ?string $replyTo = null
+): bool {
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)
+        || ($replyTo !== null && !filter_var($replyTo, FILTER_VALIDATE_EMAIL))
+        || !preg_match('/^[A-Z][0-9]{4}-[0-9]{4}\.pdf$/D', $fileName)
+        || !str_starts_with($pdfBytes, '%PDF-')) return false;
+    $boundary = 'hlinenka_pdf_'.bin2hex(random_bytes(12));
+    $body = '--'.$boundary."\r\n"
+        ."Content-Type: text/plain; charset=UTF-8\r\n"
+        ."Content-Transfer-Encoding: base64\r\n\r\n"
+        .chunk_split(base64_encode($plain), 76, "\r\n")
+        .'--'.$boundary."\r\n"
+        .'Content-Type: application/pdf; name="'.$fileName.'"'."\r\n"
+        ."Content-Transfer-Encoding: base64\r\n"
+        .'Content-Disposition: attachment; filename="'.$fileName.'"'."\r\n\r\n"
+        .chunk_split(base64_encode($pdfBytes), 76, "\r\n")
+        .'--'.$boundary."--\r\n";
+    $mime = 'multipart/mixed; boundary="'.$boundary.'"';
+    $smtp = smtp_settings();
+    if ($smtp !== null) {
+        return smtp_send_text($smtp, $to, $subject, $body, $replyTo, $mime);
+    }
+    $headers = [
+        'From: Chata Hlinenka <'.SENDER_MAIL.'>',
+        'MIME-Version: 1.0',
+        'Content-Type: '.$mime,
+    ];
+    if ($replyTo) $headers[] = 'Reply-To: <'.$replyTo.'>';
+    $accepted = @mail($to, '=?UTF-8?B?'.base64_encode($subject).'?=', $body, implode("\r\n", $headers));
+    if (!$accepted) error_log('Hlinenka: odeslani PDF prilohy selhalo');
+    return $accepted;
+}
+
+function send_invoice_pdf(array $invoice, string $subject, string $text): bool {
+    if (!in_array($invoice['type'] ?? '', ['deposit', 'full'], true)) return false;
+    try {
+        $bytes = invoice_pdf_bytes($invoice);
+    } catch (Throwable $e) {
+        error_log('Hlinenka: nelze vytvorit PDF prilohu: '.$e->getMessage());
+        return false;
+    }
+    return send_mail_pdf_attachment(
+        (string)$invoice['customerEmail'], $subject, $text,
+        $bytes, (string)$invoice['number'].'.pdf', OWNER_MAIL
+    );
+}
+
 // Automaticka odpoved zakaznikovi po odeslani nezavazne poptavky.
 // Obrazky jsou dodane majitelem Chaty Hlinenka, nikoli AI generovane.
 // Vlozene jako CID (multipart/related), aby se zobrazovaly i bez nacteni externeho obsahu.
