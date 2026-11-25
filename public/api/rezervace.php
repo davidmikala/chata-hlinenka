@@ -12,6 +12,10 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store, max-age=0');
 
+// Serverové PDF faktury, osobní údaje neopouštějí hosting.
+define('HLINENKA_PDF_INTERNAL', true);
+require_once __DIR__.'/invoice-pdf.php';
+
 // Nezavazny health-check pouze pro overeni dostupnosti PHP (bez pristupu k datům).
 if (($_GET['action'] ?? '') === 'health') {
     header('Content-Type: application/json; charset=utf-8');
@@ -623,10 +627,10 @@ function private_documents(array $d): array {
     return array_values($d['invoices'] ?? []);
 }
 function document_number(array &$d, string $type): string {
-    $prefixes = ['deposit' => 'Z', 'balance' => 'D', 'final' => 'F'];
+    $prefixes = ['deposit' => 'Z', 'balance' => 'D', 'final' => 'F', 'full' => 'F'];
     if (!isset($prefixes[$type])) throw new LogicException('Neplatny druh dokladu');
     $year = date('Y');
-    $key = $year.'-'.$type;
+    $key = $year.'-'.($type === 'full' ? 'final' : $type);
     $d['invoiceSequences'] ??= [];
     $seq = (int)($d['invoiceSequences'][$key] ?? 0) + 1;
     $d['invoiceSequences'][$key] = $seq;
@@ -642,7 +646,8 @@ function create_invoice(array &$d, array $r, string $type, int $amountDue): arra
         'type' => $type,
         'number' => document_number($d, $type),
         'issued' => date('Y-m-d'),
-        'due' => $type === 'deposit' ? date('Y-m-d', strtotime('+5 days')) : null,
+        'due' => $type === 'deposit' ? date('Y-m-d', strtotime('+5 days'))
+             : ($type === 'full' ? date('Y-m-d') : null),
         'status' => $type === 'final' ? 'paid' : 'issued',
         'amount' => $amountDue,
         'total' => (int)$r['price'],
@@ -680,11 +685,13 @@ function invoice_html(array $inv): string {
     $titles = [
         'deposit' => 'ZÁLOHOVÁ FAKTURA',
         'balance' => 'VÝZVA K DOPLATKU',
+        'full' => 'FAKTURA ZA POBYT',
         'final' => 'ZÚČTOVACÍ FAKTURA',
     ];
     $overviews = [
         'deposit' => '01 / PLATEBNÍ VÝZVA',
         'balance' => '02 / PLATEBNÍ VÝZVA',
+        'full' => 'PLATBA 100 % / POBYT NA POSLEDNÍ CHVÍLI',
         'final' => '03 / KONEČNÉ VYÚČTOVÁNÍ',
     ];
     $title = $titles[$kind] ?? 'DOKLAD';
@@ -729,6 +736,8 @@ function invoice_html(array $inv): string {
         $rows .= '<tr><td>Uhrazený doplatek</td><td>− '.$balancePaid.'</td></tr>';
     } elseif ($kind === 'deposit') {
         $rows .= '<tr><td>Záloha na rezervaci (50 %)</td><td><strong>'.$amount.'</strong></td></tr>';
+    } elseif ($kind === 'full') {
+        $rows .= '<tr><td>Jednorázová platba 100 %</td><td><strong>'.$amount.'</strong></td></tr>';
     } else {
         $rows .= '<tr><td>Uhrazená záloha</td><td>− '.$paid.'</td></tr>';
         $rows .= '<tr><td>Doplatek ceny pobytu</td><td><strong>'.$amount.'</strong></td></tr>';
@@ -754,7 +763,9 @@ function invoice_html(array $inv): string {
             ? 'Zálohová faktura je výzvou k platbě (proforma), sama není daňovým dokladem. Po přijetí zálohy pobyt písemně potvrdíme.'
             : ($kind === 'balance'
                 ? 'Výzva k úhradě doplatku není daňovým dokladem. Doplatek se hradí podle potvrzené rezervace.'
-                : 'Vyúčtování již uhrazeného pobytu. Zbývající částka k úhradě je 0 Kč.'));
+                : ($kind === 'full'
+                    ? 'Faktura na celou cenu pobytu při rezervaci na poslední chvíli. Rezervace bude potvrzena po připsání celé úhrady.'
+                    : 'Vyúčtování již uhrazeného pobytu. Zbývající částka k úhradě je 0 Kč.')));
     $note .= ' Vratná kauce 5 000 Kč a spotřeba elektrické energie za 7 Kč/kWh se účtují samostatně a nejsou součástí ceny ubytování.';
     $qrScript = $qrString === '' ? '' : <<<SCRIPT
 <script src="/js/qrcode.min.js"></script>
