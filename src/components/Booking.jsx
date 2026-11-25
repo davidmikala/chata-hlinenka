@@ -250,16 +250,14 @@ export default function Booking() {
               </div>
               <div className="booking__input-row">
                 <label>Jméno a příjmení <input ref={nameInputRef} required autoComplete="name" maxLength={100} value={form.name} onChange={(e) => onChange('name', e.target.value)} placeholder="Jméno a příjmení" /></label>
-                <label>Počet dospělých <input required type="number" min={1} max={12} value={adults} onChange={(e) => setAdults(Number(e.target.value))} /></label>
-              </div>
-              <div className="booking__input-row">
                 <label>Ulice a číslo popisné <input required autoComplete="street-address" maxLength={150} value={form.street} onChange={(e) => onChange('street', e.target.value)} placeholder="Ulice a číslo" /></label>
-                <label>PSČ a obec <input required maxLength={150} value={form.city} onChange={(e) => onChange('city', e.target.value)} placeholder="PSČ a obec" /></label>
               </div>
+              <label>PSČ a obec <input required maxLength={150} value={form.city} onChange={(e) => onChange('city', e.target.value)} placeholder="PSČ a obec" /></label>
               <div className="booking__input-row">
+                <label>Počet dospělých <input required type="number" min={1} max={12} value={adults} onChange={(e) => setAdults(Number(e.target.value))} /></label>
                 <label>Počet dětí <input required type="number" min={0} max={11} value={children} onChange={(e) => setChildren(Number(e.target.value))} /></label>
-                <span aria-live="polite" className="booking__guest-total">Celkem hostů: {adults + children} (max. 12)</span>
               </div>
+              <span aria-live="polite" className="booking__guest-total">Celkem hostů: {adults + children} (max. 12)</span>
               <div className="booking__input-row">
                 <label>E-mail <input required type="email" autoComplete="email" maxLength={150} value={form.email} onChange={(e) => onChange('email', e.target.value)} placeholder="vas@email.cz" /></label>
                 <label>Telefon <input required type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(e) => onChange('phone', e.target.value)} placeholder="+420 …" /></label>
