@@ -80,10 +80,21 @@ code=$(curl -sS -o "$TEMP_DIR/delete.json" -w '%{http_code}' -H "Cookie: HLINENK
   -d "$(jq -nc --arg id "$R" '{id:$id}')" "$API?action=delete")
 test "$code" = "409"
 # Pobyt objednaný nejvýše 5 dní před příjezdem: jedna faktura na 100 %.
+# Testovací úložiště: smazat pouze záznam limitu poptávek, aby druhý
+# scénář nemusel 45 sekund čekat; v produkčním API ochrana zůstává aktivní.
+python3 - "$DATA_DIR/reservations.json" <<'PY'
+import json,sys
+path=sys.argv[1]
+with open(path,encoding="utf-8") as f: state=json.load(f)
+state["ip_times"]={}
+with open(path,"w",encoding="utf-8") as f: json.dump(state,f,ensure_ascii=False)
+PY
 LAST_START=$(date -d '+2 days' +%Y-%m-%d)
-LAST_END=$(date -d '+4 days' +%Y-%m-%d)
+LAST_END=$(date -d '+6 days' +%Y-%m-%d)
 request inquiry "$(jq -nc --arg a "$LAST_START" --arg b "$LAST_END" '{name:"Host posledni chvile",phone:"+420123456789",email:"host@example.cz",people:2,start:$a,end:$b,message:"Last minute 100%"}')" | jq -e '.ok==true and .saved==true'
 LAST_ID=$(get_admin | jq -r '.records[]|select(.name=="Host posledni chvile")|.id')
+# Stejná dohodnutá cena pro test nezávisle na sezóně či příplatcích.
+request set-agreed-price "$(jq -nc --arg id "$LAST_ID" '{id:$id,price:20000}')" | jq -e '.ok==true'
 request invoice-customer "$(jq -nc --arg id "$LAST_ID" '{id:$id,name:"Host posledni chvile",address:"Test 10, 768 41 Bystrice pod Hostynem"}')" | jq -e '.ok==true'
 request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"awaiting_deposit"}')" | jq -e '.ok==true and .fullPayment==true'
 get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
