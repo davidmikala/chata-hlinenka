@@ -635,96 +635,214 @@ function money_cz(int $amount): string { return number_format($amount, 0, ',', '
 function date_cz(string $day): string { return (new DateTimeImmutable($day))->format('j. n. Y'); }
 function htmlsafe(string $text): string { return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function invoice_html(array $inv): string {
-    $type = match ($inv['type']) {
-        'deposit' => 'ZÁLOHOVÁ FAKTURA – VÝZVA K PLATBĚ',
-        'balance' => 'VÝZVA K ÚHRADĚ DOPLATKU',
-        'final' => 'VYÚČTOVACÍ FAKTURA',
-        default => 'DOKLAD'
-    };
+    // Schválený pevný vzhled A – Přírodní elegance. Stejný motiv pro všechny doklady.
+    // Údaje vystavovatele jsou výhradně uložený snímek skutečného ubytovatele,
+    // nikdy automaticky fakturační údaje společnosti MIKALA.
+    $kind = (string)($inv['type'] ?? '');
+    $final = $kind === 'final';
+    $titles = [
+        'deposit' => 'ZÁLOHOVÁ FAKTURA',
+        'balance' => 'VÝZVA K DOPLATKU',
+        'final' => 'ZÚČTOVACÍ FAKTURA',
+    ];
+    $overviews = [
+        'deposit' => '01 / PLATEBNÍ VÝZVA',
+        'balance' => '02 / PLATEBNÍ VÝZVA',
+        'final' => '03 / KONEČNÉ VYÚČTOVÁNÍ',
+    ];
+    $title = $titles[$kind] ?? 'DOKLAD';
+    $overview = $overviews[$kind] ?? '';
     $seller = $inv['seller'];
     $sellerHtml = htmlsafe((string)$seller['sellerName']);
-    $addressHtml = nl2br(htmlsafe((string)$seller['sellerAddress']));
+    $sellerAddress = nl2br(htmlsafe((string)$seller['sellerAddress']));
     $ico = htmlsafe((string)$seller['sellerId']);
-    $vatLine = $seller['vatMode'] === 'nonvat' ? 'Nejsme plátci DPH.' : '';
+    $vatLine = ($seller['vatMode'] ?? '') === 'nonvat' ? '<br>Nejsme plátci DPH.' : '';
     $no = htmlsafe((string)$inv['number']);
     $customer = htmlsafe((string)$inv['customerName']);
     $customerAddress = nl2br(htmlsafe((string)$inv['customerAddress']));
-    $email = htmlsafe((string)$inv['customerEmail']);
     $issued = date_cz((string)$inv['issued']);
     $stay = date_cz((string)$inv['dateStart']).' – '.date_cz((string)$inv['dateEnd']);
-    $due = $inv['due'] ? date_cz((string)$inv['due']) : 'Dle platebních pokynů, nejpozději před předáním objektu';
-    if ($inv['type'] === 'final') $due = 'UHRAZENO';
-    $amount = money_cz((int)$inv['amount']);
+    $nights = days_between((string)$inv['dateStart'], (string)$inv['dateEnd']);
+    $status = (string)($inv['status'] ?? 'issued');
+    $statusLabel = $status === 'cancelled' ? 'ZRUŠENO' : ($status === 'paid' ? 'UHRAZENO' : 'K ÚHRADĚ');
+    $due = $inv['due'] ? date_cz((string)$inv['due']) : 'Podle platebních pokynů';
+    $amountDue = (int)$inv['amount'];
+    $amount = money_cz($amountDue);
     $total = money_cz((int)$inv['total']);
-    $paid = money_cz((int)$inv['depositPaid']);
+    $depositPaid = (int)$inv['depositPaid'];
+    $paid = money_cz($depositPaid);
+    $balancePaid = money_cz(max(0, (int)$inv['total'] - $depositPaid));
     $account = htmlsafe((string)($seller['bankAccount'] ?: $seller['iban']));
     $iban = htmlsafe((string)$seller['iban']);
     $vs = htmlsafe((string)$inv['variableSymbol']);
     $qrString = '';
-    if ((int)$inv['amount'] > 0 && ($inv['status'] ?? '') !== 'cancelled') {
-        // QR Platba podle SPAYD / ceskeho standardu; nezasila se treti strane.
-        $qrString = 'SPD*1.0*ACC:'.$seller['iban'].'*AM:'.number_format((int)$inv['amount'], 2, '.', '')
+    if ($amountDue > 0 && $status === 'issued') {
+        // Lokální QR platba SPAYD: skutečný IBAN a VS z fakturačního nastavení.
+        $qrString = 'SPD*1.0*ACC:'.$seller['iban'].'*AM:'.number_format($amountDue, 2, '.', '')
             .'*CC:CZK*X-VS:'.$inv['variableSymbol'];
     }
     $jsonQr = json_encode($qrString, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    $note = ($inv['status'] ?? '') === 'cancelled' ? 'Tento doklad byl zrušen. Neprovádějte podle něj žádnou platbu.' : ($inv['type'] === 'deposit'
-        ? 'Tato zálohová faktura (proforma) není daňovým dokladem. Rezervace bude potvrzena po přijetí zálohy.'
-        : ($inv['type'] === 'balance'
-           ? 'Doplatek podle potvrzené rezervace. Není daňovým dokladem.'
-           : 'Zúčtování zaplaceného pobytu; zbývající částka k úhradě je 0 Kč.'));
-    $detail = $inv['type'] === 'final'
-        ? '<tr><td>Celková cena ubytování</td><td class="right">'.$total.'</td></tr>'
-          .'<tr><td>Uhrazená záloha</td><td class="right">– '.$paid.'</td></tr>'
-          .'<tr><td>Uhrazený doplatek</td><td class="right">– '.money_cz((int)$inv['total']-(int)$inv['depositPaid']).'</td></tr>'
-        : '<tr><td>'.($inv['type'] === 'deposit' ? 'Rezervační záloha 50 %' : 'Doplatek ceny pobytu').'</td><td class="right">'.$amount.'</td></tr>';
-    $qr = $qrString !== '' ? '<div class="qr"><div id="payment-qr"></div><small>Naskenujte v bankovní aplikaci</small></div>' : '';
+    $dueRow = $final
+        ? '<div class="line"><span>Stav platby</span><span>Uhrazeno</span></div>'
+        : '<div class="line"><span>Splatnost</span><span>'.htmlsafe($due).'</span></div>';
+    $amountLabel = $final ? 'Zbývá k úhradě' : 'Částka k úhradě';
+    $rows = '<tr><td>Ubytování – Chata Hliněnka<br><span class="minor">'.$stay.' · '.$nights.' nocí</span></td><td>'.$total.'</td></tr>';
+    if ($final) {
+        $rows .= '<tr><td>Uhrazená záloha</td><td>− '.$paid.'</td></tr>';
+        $rows .= '<tr><td>Uhrazený doplatek</td><td>− '.$balancePaid.'</td></tr>';
+    } elseif ($kind === 'deposit') {
+        $rows .= '<tr><td>Záloha na rezervaci (50 %)</td><td><strong>'.$amount.'</strong></td></tr>';
+    } else {
+        $rows .= '<tr><td>Uhrazená záloha</td><td>− '.$paid.'</td></tr>';
+        $rows .= '<tr><td>Doplatek ceny pobytu</td><td><strong>'.$amount.'</strong></td></tr>';
+    }
+    if ($final) {
+        $payment = '<div><div class="smallhead">Přehled úhrad</div><p>'
+            .'Záloha: <strong>'.$paid.'</strong> · uhrazeno<br>'
+            .'Doplatek: <strong>'.$balancePaid.'</strong> · uhrazeno<br>'
+            .'Celkem zaplaceno: <strong>'.$total.'</strong><br>'
+            .'Variabilní symbol: <strong>'.$vs.'</strong></p></div>'
+            .'<div class="paid-mark">PLNĚ UHRAZENO</div>';
+    } else {
+        $dueDetail = $kind === 'deposit' ? '<br>Splatnost: <strong>'.htmlsafe($due).'</strong>' : '';
+        $payment = '<div><div class="smallhead">Platební údaje</div><p>'
+            .'Číslo účtu: <strong>'.$account.'</strong><br>'
+            .'IBAN: '.$iban.'<br>'
+            .'Variabilní symbol: <strong>'.$vs.'</strong>'.$dueDetail.'</p></div>'
+            .($qrString !== '' ? '<div class="qrbox"><div id="payment-qr"></div><small>QR platba · naskenujte v bankovní aplikaci</small></div>' : '');
+    }
+    $note = $status === 'cancelled'
+        ? '<strong>Doklad byl zrušen – neprovádějte podle něj žádnou platbu.</strong>'
+        : ($kind === 'deposit'
+            ? 'Zálohová faktura je výzvou k platbě (proforma), sama není daňovým dokladem. Po přijetí zálohy pobyt písemně potvrdíme.'
+            : ($kind === 'balance'
+                ? 'Výzva k úhradě doplatku není daňovým dokladem. Doplatek se hradí podle potvrzené rezervace.'
+                : 'Vyúčtování již uhrazeného pobytu. Zbývající částka k úhradě je 0 Kč.'));
+    $note .= ' Vratná kauce 5 000 Kč a spotřeba elektrické energie za 7 Kč/kWh se účtují samostatně a nejsou součástí ceny ubytování.';
+    $qrScript = $qrString === '' ? '' : <<<SCRIPT
+<script src="/js/qrcode.min.js"></script>
+<script>(function(){var v={$jsonQr},el=document.getElementById('payment-qr');if(v&&el&&typeof QRCode!=='undefined'){new QRCode(el,{text:v,width:145,height:145,correctLevel:QRCode.CorrectLevel.M});}})();</script>
+SCRIPT;
+
     return <<<HTML
-<!doctype html><html lang="cs"><head>
+<!doctype html>
+<html lang="cs"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>{$no} | Chata Hliněnka</title>
 <style>
-*{box-sizing:border-box}body{font:15px/1.6 Arial,sans-serif;background:#e9efe8;color:#183d29;margin:0;padding:28px}
-.paper{max-width:800px;margin:auto;background:#fff;box-shadow:0 12px 40px #1b332522;border-radius:8px;padding:42px}
-h1{font:normal 31px Georgia,serif;margin:14px 0;color:#18442e}h2{font:normal 18px Georgia,serif;color:#254f3b;margin:10px 0}
-.top,.parties,.pay{display:flex;justify-content:space-between;gap:30px}.top{border-bottom:2px solid #24563c;padding-bottom:20px;align-items:center}
-.brand{font:normal 26px Georgia,serif}.sub{color:#668170;font-size:13px}.parties>div{flex:1}
-table{width:100%;border-collapse:collapse;margin:26px 0}td{border-bottom:1px solid #e0e6df;padding:10px 5px}.right{text-align:right;font-weight:700}
-.total{background:#e7eee4;padding:18px;font-weight:700;font-size:20px;border-radius:8px}
-.pay{align-items:center;margin-top:20px;flex-wrap:wrap}.qr{min-width:185px;text-align:center}
-#payment-qr{display:flex;justify-content:center}.qr small{font-size:11px;color:#56725e}
-.note{margin-top:24px;color:#576c60;font-size:13px}.print{margin:0 0 20px;text-align:center}
-button{padding:10px 18px;border:0;border-radius:6px;background:#24563c;color:#fff;cursor:pointer;font-size:14px}
-@media(max-width:640px){body{padding:10px}.paper{padding:22px}.top,.parties{flex-direction:column;gap:12px}h1{font-size:25px}}
-@media print{body{padding:0;background:#fff}.paper{max-width:none;padding:15mm;box-shadow:none}.print{display:none}}
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#e9eee8;color:#193628;font:15px/1.45 Arial,Helvetica,sans-serif}
+.invoice-toolbar{text-align:center;padding:16px}
+.invoice-toolbar button{background:#1D4632;color:#fff;padding:11px 20px;border:0;border-radius:5px;cursor:pointer;font-weight:700}
+.paper{--color:#1D4632;--gold:#B68B4B;--muted:#728276;--light:#E9EDE3;max-width:210mm;min-height:297mm;position:relative;overflow:hidden;margin:0 auto 18px;padding:15mm 19mm 23mm;background:#fffdf8;box-shadow:0 12px 36px #19362820}
+.topline{position:absolute;top:0;left:0;right:0;background:#1D4632;height:13mm}
+.head{display:flex;align-items:center;gap:15px;margin:4mm 0 3mm;padding-bottom:4mm;border-bottom:2px solid #B68B4B}
+.logo{width:67px;height:67px;object-fit:cover;border-radius:50%;flex:none}
+.brand{font:700 30px/1.05 Georgia,'Times New Roman',serif;color:#1D4632;white-space:nowrap}
+.contact{font-size:12px;line-height:1.5;color:var(--muted)}
+.top-right{margin-left:auto;text-align:right;color:var(--gold);font-size:14px;letter-spacing:1.5px;font-weight:700}
+.top-right span{font-size:12px;color:var(--muted);letter-spacing:0;font-weight:400}
+.title-area{margin:0 0 4mm}
+.overview{color:var(--muted);font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+.big-title{font:700 42px/1.09 Georgia,'Times New Roman',serif;color:var(--color);margin:2px 0 0}
+.doc-meta{display:flex;gap:13px;align-items:center;margin-top:5mm;font-size:15px}
+.status{display:inline-block;background:#ECF0E8;color:#1D4632;padding:6px 11px;border-radius:4px;font-weight:700;font-size:12px;letter-spacing:.6px}
+.status--cancelled{background:#fae8e2;color:#883e2a}
+.parties{display:flex;gap:12mm;background:#F7F4E9;padding:5mm 9mm;border-radius:6px;margin-bottom:4mm}
+.parties>div{width:50%}
+.smallhead{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:2mm}
+.person{font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.data{margin-bottom:4mm}
+.details{display:table;width:100%;border-collapse:collapse}
+.details .line{display:table-row}
+.details .line span{display:table-cell;padding:7px 0;border-bottom:1px solid var(--light);font-size:14px}
+.details .line span:last-child{text-align:right;font-weight:700}
+.items{margin-bottom:3mm}
+.product-table{width:100%;border-collapse:collapse;font-size:14px}
+.product-table th{text-align:left;padding:10px;text-transform:uppercase;letter-spacing:1px;font-size:12px;background:#EFF0E8;color:var(--color)}
+.product-table td{padding:8px 10px;border-bottom:1px solid var(--light)}
+.product-table td:last-child,.product-table th:last-child{text-align:right;white-space:nowrap}
+.minor{color:var(--muted);font-size:12px}
+.totalbox{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:12px 16px;background:var(--color);color:#fff;border-radius:5px;margin:5mm 0}
+.totalbox label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.totalbox strong{font-size:34px;letter-spacing:-1px;white-space:nowrap}
+.payment{display:flex;gap:8mm;align-items:center;justify-content:space-between;margin-bottom:3mm}
+.payment p{margin:3mm 0;line-height:1.4}
+.qrbox{width:39mm;flex:none;text-align:center}
+#payment-qr{display:flex;justify-content:center;align-items:center}
+#payment-qr img,#payment-qr canvas{max-width:35mm;width:35mm;height:35mm;image-rendering:pixelated}
+.qrbox small{display:block;font-size:10px;line-height:1.25;color:var(--muted);margin-top:2mm}
+.paid-mark{border:3px solid #2D674B;color:#2D674B;border-radius:6px;padding:13px;text-align:center;font-size:19px;font-weight:700}
+.note{font-size:12px;color:var(--muted);line-height:1.4;margin:0}
+.footer{position:absolute;bottom:8mm;left:19mm;right:19mm;border-top:1px solid var(--light);padding-top:4mm;display:flex;justify-content:space-between;gap:16px;color:var(--muted);font-size:11px}
+@media screen and (max-width:780px){
+ .paper{min-height:0;padding:44px 18px 68px}
+ .topline{height:18px}
+ .head{flex-wrap:wrap}
+ .brand{font-size:24px;white-space:normal}
+ .top-right{font-size:12px}
+ .big-title{font-size:clamp(27px,7vw,42px)}
+ .parties{gap:15px;padding:16px}
+ .details .line span{font-size:13px}
+ .totalbox strong{font-size:29px}
+ .footer{left:18px;right:18px;bottom:15px;font-size:10px}
+}
+@media screen and (max-width:500px){
+ .head{gap:10px}
+ .logo{width:50px;height:50px}
+ .top-right{width:100%;margin:0;text-align:left}
+ .parties{flex-direction:column;gap:12px}
+ .parties>div{width:100%}
+ .payment{align-items:flex-start;flex-direction:column}
+ .totalbox strong{font-size:25px}
+ .footer{flex-direction:column;gap:3px}
+}
+@media print{
+ html,body{width:210mm;height:auto;background:#fff}
+ .invoice-toolbar{display:none}
+ .paper{width:210mm;max-width:none;min-height:297mm;height:297mm;margin:0;padding:15mm 19mm 23mm;box-shadow:none;break-after:page;page-break-after:always}
+ .head{flex-wrap:nowrap}
+ .brand{font-size:30px;white-space:nowrap}
+ .top-right{width:auto;margin-left:auto;text-align:right}
+ .parties{flex-direction:row}
+ .parties>div{width:50%}
+ .payment{flex-direction:row;align-items:center}
+ .big-title{font-size:42px}
+ .footer{left:19mm;right:19mm;bottom:8mm;font-size:11px;flex-direction:row}
+}
 </style></head><body>
-<div class="print"><button onclick="window.print()">Vytisknout / Uložit jako PDF</button></div>
+<div class="invoice-toolbar"><button type="button" onclick="window.print()">Vytisknout / Uložit jako PDF</button></div>
 <main class="paper">
-<div class="top"><div><div class="brand">Chata Hliněnka</div><div class="sub">Hlinsko pod Hostýnem · www.chatahlinenka.cz</div></div><div class="sub">Doklad č. <strong>{$no}</strong></div></div>
-<h1>{$type}</h1>
-<div class="parties">
-<div><h2>Dodavatel</h2><strong>{$sellerHtml}</strong><br>{$addressHtml}<br>IČO: {$ico}<br>{$vatLine}</div>
-<div><h2>Odběratel</h2><strong>{$customer}</strong><br>{$customerAddress}<br>{$email}</div>
-</div>
-<table>
-<tr><td>Číslo dokladu</td><td class="right">{$no}</td></tr>
-<tr><td>Datum vystavení</td><td class="right">{$issued}</td></tr>
-<tr><td>Splatnost</td><td class="right">{$due}</td></tr>
-<tr><td>Termín pobytu</td><td class="right">{$stay}</td></tr>
-</table>
-<h2>Ubytování – Chata Hliněnka</h2>
-<table>{$detail}</table>
-<div class="total">{$type}: {$amount}</div>
-<div class="pay"><div><strong>Platební údaje</strong><br>
-Účet: {$account}<br>IBAN: {$iban}<br>Variabilní symbol: <strong>{$vs}</strong>
-<br>Částka k úhradě: <strong>{$amount}</strong><br>Potvrzení plateb: david@mikala.cz
-</div>{$qr}</div>
-<p class="note">{$note}</p>
-<p class="sub">Tento doklad byl vystaven elektronicky rezervačním systémem Chaty Hliněnka.</p>
+  <div class="topline"></div>
+  <header class="head">
+    <img class="logo" src="/email/logo-hlinenka-prirodni.jpg" alt="Logo Chaty Hliněnka">
+    <div><div class="brand">Chata Hliněnka</div><div class="contact">Hlinsko pod Hostýnem · www.chatahlinenka.cz</div></div>
+    <div class="top-right">HOSTÝNSKÉ VRCHY<br><span>ubytování v přírodě</span></div>
+  </header>
+  <section class="title-area">
+    <div class="overview">{$overview}</div>
+    <h1 class="big-title">{$title}</h1>
+    <div class="doc-meta"><strong>č. {$no}</strong> <span class="status">{$statusLabel}</span></div>
+  </section>
+  <div class="parties">
+    <div><div class="smallhead">Dodavatel</div><div class="person"><b>{$sellerHtml} · Chata Hliněnka</b><br>{$sellerAddress}<br>IČO: {$ico}{$vatLine}<br>www.chatahlinenka.cz</div></div>
+    <div><div class="smallhead">Odběratel</div><div class="person"><b>{$customer}</b><br>{$customerAddress}<br>Termín: {$stay}</div></div>
+  </div>
+  <div class="data"><div class="details">
+    <div class="line"><span>Datum vystavení</span><span>{$issued}</span></div>
+    {$dueRow}
+    <div class="line"><span>Místo pobytu</span><span>Chata Hliněnka, Hlinsko pod Hostýnem</span></div>
+  </div></div>
+  <section class="items"><div class="smallhead">Položky a vyúčtování</div>
+    <table class="product-table"><thead><tr><th>Popis</th><th>Částka</th></tr></thead><tbody>{$rows}</tbody></table>
+  </section>
+  <div class="totalbox"><label>{$amountLabel}</label><strong>{$amount}</strong></div>
+  <div class="payment">{$payment}</div>
+  <p class="note">{$note}</p>
+  <footer class="footer"><span>Chata Hliněnka · david@mikala.cz · +420 605 270 444</span><span>www.chatahlinenka.cz</span></footer>
 </main>
-<script src="/js/qrcode.min.js"></script>
-<script>
-(function(){var v={$jsonQr};if(v && typeof QRCode !== "undefined"){new QRCode(document.getElementById("payment-qr"),{text:v,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});}})();
-</script>
+{$qrScript}
 </body></html>
 HTML;
 }
