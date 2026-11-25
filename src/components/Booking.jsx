@@ -114,8 +114,9 @@ export default function Booking() {
   const [loadError, setLoadError] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
-  const [people, setPeople] = useState(2);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [form, setForm] = useState({ name: '', street: '', city: '', email: '', phone: '', message: '' });
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const nameInputRef = useRef(null);
@@ -168,14 +169,14 @@ export default function Booking() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!validDates || sending) return;
+    if (!validDates || sending || adults + children > 12 || adults < 1 || children < 0) return;
     setSending(true);
     setFeedback(null);
     try {
       const r = await fetch(API + '?action=inquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start, end, people, ...form }),
+        body: JSON.stringify({ start, end, people: adults + children, adults, children, ...form }),
       });
       const data = await r.json();
       if (!r.ok || !data.ok) throw new Error(data.message || 'Poptávku se nepodařilo odeslat.');
@@ -183,7 +184,7 @@ export default function Booking() {
       // Poptávka je uložená i když e-mail neodejde. Formulář vyčistíme,
       // aby host stejný záznam neodesílal opakovaně.
       if (data.saved === true || data.notified === true) {
-        setForm({ name: '', email: '', phone: '', message: '' });
+        setForm({ name: '', street: '', city: '', email: '', phone: '', message: '' });
         setStart(''); setEnd('');
       }
     } catch (e) {
@@ -249,7 +250,15 @@ export default function Booking() {
               </div>
               <div className="booking__input-row">
                 <label>Jméno a příjmení <input ref={nameInputRef} required autoComplete="name" maxLength={100} value={form.name} onChange={(e) => onChange('name', e.target.value)} placeholder="Jméno a příjmení" /></label>
-                <label>Počet osob <input required type="number" min={1} max={12} value={people} onChange={(e) => setPeople(Number(e.target.value))} /></label>
+                <label>Počet dospělých <input required type="number" min={1} max={12} value={adults} onChange={(e) => setAdults(Number(e.target.value))} /></label>
+              </div>
+              <div className="booking__input-row">
+                <label>Ulice a číslo popisné <input required autoComplete="street-address" maxLength={150} value={form.street} onChange={(e) => onChange('street', e.target.value)} placeholder="Ulice a číslo" /></label>
+                <label>PSČ a obec <input required maxLength={150} value={form.city} onChange={(e) => onChange('city', e.target.value)} placeholder="PSČ a obec" /></label>
+              </div>
+              <div className="booking__input-row">
+                <label>Počet dětí <input required type="number" min={0} max={11} value={children} onChange={(e) => setChildren(Number(e.target.value))} /></label>
+                <span aria-live="polite" className="booking__guest-total">Celkem hostů: {adults + children} (max. 12)</span>
               </div>
               <div className="booking__input-row">
                 <label>E-mail <input required type="email" autoComplete="email" maxLength={150} value={form.email} onChange={(e) => onChange('email', e.target.value)} placeholder="vas@email.cz" /></label>
@@ -271,7 +280,7 @@ export default function Booking() {
               {conflict && <p className="booking__invalid">Tento termín zasahuje do obsazenosti.</p>}
               {feedback && <p className={feedback.ok ? 'booking__success' : 'booking__alert'} role="status">{feedback.text}</p>}
               <p className="booking__terms-note">Před odesláním poptávky si prosím přečtěte <a href="/vseobecne-obchodni-podminky/" target="_blank" rel="noopener noreferrer">všeobecné obchodní a ubytovací podmínky</a>.</p>
-              <button className="booking__send" type="submit" disabled={!validDates || sending}>{sending ? 'Odesílám…' : 'Odeslat nezávaznou poptávku'}</button>
+              <button className="booking__send" type="submit" disabled={!validDates || sending || adults + children > 12 || adults < 1 || children < 0}>{sending ? 'Odesílám…' : 'Odeslat nezávaznou poptávku'}</button>
             </form>
           </div>
         </div>
