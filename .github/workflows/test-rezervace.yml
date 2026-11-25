@@ -17,6 +17,9 @@ jobs:
           cache: npm
       - name: Instalovat zavislosti
         run: npm ci
+      - name: Nainstalovat PDF knihovnu jen pro serverové doklady
+        run: composer install --working-dir=public/api --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Overit PHP syntaxi
         run: php -l public/api/rezervace.php
       - name: Sestavit web
@@ -110,6 +113,11 @@ jobs:
           grep -Fq 'echalupy_conflict' public/api/rezervace.php
           grep -Fq 'Obsazené intervaly z e-chalupy.cz' public/sprava-rezervaci.html
           grep -Fq "!== 'iCal'" public/api/rezervace.php
+
+      - name: Nainstalovat nastroje pro overeni PDF souboru
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
 
       - name: Otestovat fakturacni cyklus a lokalni QR platbu
         shell: bash

@@ -14,7 +14,14 @@ cleanup() {
 trap cleanup EXIT
 mkdir -p "$TEMP_DIR/sessions"
 printf 'admin|b:1;' > "$TEMP_DIR/sessions/sess_$SESSION_ID"
-php -d "session.save_path=$TEMP_DIR/sessions" -S 127.0.0.1:8766 -t dist > "$TEMP_DIR/server.log" 2>&1 &
+# Žádné skutečné e-maily: zachytit a zkontrolovat MIME přílohu přes PHP mail().
+export HLINENKA_TEST_MAIL_CAPTURE="$TEMP_DIR/last-email.eml"
+cat > "$TEMP_DIR/fake-sendmail.sh" <<'SH'
+#!/bin/sh
+cat > "$HLINENKA_TEST_MAIL_CAPTURE"
+SH
+chmod +x "$TEMP_DIR/fake-sendmail.sh"
+php -d "sendmail_path=$TEMP_DIR/fake-sendmail.sh" -d "session.save_path=$TEMP_DIR/sessions" -S 127.0.0.1:8766 -t dist > "$TEMP_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 for i in {1..30}; do
   if curl -fsS "$API?action=health" > /dev/null 2>&1; then break; fi
@@ -29,6 +36,9 @@ get_admin() {
   curl -fsS "$API?action=admin" -H "Cookie: HLINENKA_ADMIN=$SESSION_ID"
 }
 test -f dist/js/qrcode.min.js
+test -f dist/api/vendor/autoload.php
+test -f dist/api/invoice-pdf.php
+test -f dist/api/vendor/.htaccess
 # První přístup migruje výchozí fakturační údaje skutečného ubytovatele
 # i výslovně potvrzený režim neplátce DPH. Ukládání nesmí mazat ostatní data.
 get_admin | jq -e '.billingSettings.sellerName=="David Mikala" and .billingSettings.sellerId=="74743881" and .billingSettings.bankAccount=="6052704445/6363" and .billingSettings.iban=="CZ6363630000006052704445" and .billingSettings.vatMode=="nonvat" and .billingReady==true'
@@ -43,6 +53,17 @@ request decision "$(jq -nc --arg id "$R" '{id:$id,status:"awaiting_deposit"}')" 
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==0'
 get_admin | jq -e '.invoices|length==1'
 get_admin | jq -e '.invoices[0].type=="deposit" and .invoices[0].amount==10000 and (.invoices[0].number|test("^Z[0-9]{4}-0001$"))'
+python3 - "$TEMP_DIR/last-email.eml" deposit <<'PY'
+import sys,email
+from email import policy
+from email.parser import BytesParser
+msg=BytesParser(policy=policy.default).parsebytes(open(sys.argv[1],"rb").read())
+pdfs=[p for p in msg.walk() if p.get_content_type()=="application/pdf"]
+assert msg.get_content_type()=="multipart/mixed", msg.get_content_type()
+assert len(pdfs)==1 and pdfs[0].get_filename().startswith("Z20")
+assert pdfs[0].get_payload(decode=True).startswith(b"%PDF-")
+assert "20000" not in pdfs[0].get_filename()
+PY
 INV_TOKEN=$(get_admin | jq -r '.invoices[0].token')
 curl -fsS "$API?action=invoice-view&token=$INV_TOKEN" > "$TEMP_DIR/invoice.html"
 grep -q 'SPD\*1.0\*ACC:' "$TEMP_DIR/invoice.html"
@@ -52,6 +73,14 @@ grep -Fq '/email/logo-hlinenka-prirodni.jpg' "$TEMP_DIR/invoice.html"
 grep -Fq '7 Kč/kWh' "$TEMP_DIR/invoice.html"
 grep -Fq 'ZÁLOHOVÁ FAKTURA' "$TEMP_DIR/invoice.html"
 grep -Fq 'Nejsme plátci DPH.' "$TEMP_DIR/invoice.html"
+curl -fsS "$API?action=invoice-pdf&token=$INV_TOKEN" > "$TEMP_DIR/deposit.pdf"
+head -c 5 "$TEMP_DIR/deposit.pdf" | grep -q '%PDF-'
+test "$(wc -c < "$TEMP_DIR/deposit.pdf")" -gt 5000
+# Sám vytvořený PDF má být jeden A4 list a obsahuje skutečné fakturační údaje.
+pdfinfo "$TEMP_DIR/deposit.pdf" | grep -Fq 'Pages:           1'
+pdftotext "$TEMP_DIR/deposit.pdf" "$TEMP_DIR/deposit.txt"
+grep -Fq 'Chata Hliněnka' "$TEMP_DIR/deposit.txt"
+grep -Fq '10 000' "$TEMP_DIR/deposit.txt"
 request decision "$(jq -nc --arg id "$R" '{id:$id,status:"approved"}')" | jq -e '.ok==true'
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==1'
 get_admin | jq -e '.invoices|length==2'
@@ -68,4 +97,48 @@ if grep -Fq 'id="payment-qr"' "$TEMP_DIR/final.html"; then echo 'QR platba se ne
 code=$(curl -sS -o "$TEMP_DIR/delete.json" -w '%{http_code}' -H "Cookie: HLINENKA_ADMIN=$SESSION_ID" -H 'Content-Type: application/json' \
   -d "$(jq -nc --arg id "$R" '{id:$id}')" "$API?action=delete")
 test "$code" = "409"
-echo 'Fakturace: proforma, potvrzeni po zaloze, doplatek, vyuctovani i QR prosly.'
+# Pobyt objednaný nejvýše 5 dní před příjezdem: jedna faktura na 100 %.
+# Testovací úložiště: smazat pouze záznam limitu poptávek, aby druhý
+# scénář nemusel 45 sekund čekat; v produkčním API ochrana zůstává aktivní.
+python3 - "$DATA_DIR/reservations.json" <<'PY'
+import json,sys
+path=sys.argv[1]
+with open(path,encoding="utf-8") as f: state=json.load(f)
+state["ip_times"]={}
+with open(path,"w",encoding="utf-8") as f: json.dump(state,f,ensure_ascii=False)
+PY
+LAST_START=$(date -d '+2 days' +%Y-%m-%d)
+LAST_END=$(date -d '+6 days' +%Y-%m-%d)
+request inquiry "$(jq -nc --arg a "$LAST_START" --arg b "$LAST_END" '{name:"Host posledni chvile",phone:"+420123456789",email:"host@example.cz",people:2,start:$a,end:$b,message:"Last minute 100%"}')" | jq -e '.ok==true and .saved==true'
+LAST_ID=$(get_admin | jq -r '.records[]|select(.name=="Host posledni chvile")|.id')
+# Stejná dohodnutá cena pro test nezávisle na sezóně či příplatcích.
+request set-agreed-price "$(jq -nc --arg id "$LAST_ID" '{id:$id,price:20000}')" | jq -e '.ok==true'
+request invoice-customer "$(jq -nc --arg id "$LAST_ID" '{id:$id,name:"Host posledni chvile",address:"Test 10, 768 41 Bystrice pod Hostynem"}')" | jq -e '.ok==true'
+request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"awaiting_deposit"}')" | jq -e '.ok==true and .fullPayment==true'
+python3 - "$TEMP_DIR/last-email.eml" full <<'PY'
+import sys
+from email import policy
+from email.parser import BytesParser
+msg=BytesParser(policy=policy.default).parsebytes(open(sys.argv[1],"rb").read())
+pdfs=[p for p in msg.walk() if p.get_content_type()=="application/pdf"]
+assert msg.get_content_type()=="multipart/mixed"
+assert len(pdfs)==1 and pdfs[0].get_filename().startswith("F20")
+assert pdfs[0].get_payload(decode=True).startswith(b"%PDF-")
+assert "100 %" in str(msg.get_payload(0).get_payload(decode=True).decode("utf-8")) 
+PY
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))[0]|.type=="full" and .amount==20000 and (.number|test("^F[0-9]{4}-0002$"))'
+LAST_TOKEN=$(get_admin | jq -r --arg id "$LAST_ID" '.invoices[]|select(.reservationId==$id)|.token')
+curl -fsS "$API?action=invoice-pdf&token=$LAST_TOKEN" > "$TEMP_DIR/lastminute.pdf"
+head -c 5 "$TEMP_DIR/lastminute.pdf" | grep -q '%PDF-'
+pdftotext "$TEMP_DIR/lastminute.pdf" "$TEMP_DIR/lastminute.txt"
+grep -Fq 'FAKTURA ZA POBYT' "$TEMP_DIR/lastminute.txt"
+grep -Fq '20 000' "$TEMP_DIR/lastminute.txt"
+request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"approved"}')" | jq -e '.ok==true and .fullPayment==true'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
+get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))[0]|.type=="full" and .status=="paid"'
+curl -fsS "$API?action=calendar" | jq -e '.occupied|length==2'
+code=$(curl -sS -o "$TEMP_DIR/duplicate.json" -w '%{http_code}' -H "Cookie: HLINENKA_ADMIN=$SESSION_ID" -H 'Content-Type: application/json' \
+  -d "$(jq -nc --arg id "$LAST_ID" '{id:$id}')" "$API?action=record-balance")
+test "$code" = "409"
+echo 'Fakturace: zalohove a 100% PDF, QR, 50% doplatek i standardni vyuctovani prosly.'

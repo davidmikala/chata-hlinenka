@@ -10,8 +10,8 @@
 ## Proces podle VOP (účinnost 23. 11. 2026)
 
 - **Poptávka:** zatím bez faktury a bez blokace termínu.
-- **Odsouhlasit nabídku – vystavit zálohu:** vytvoří se číslovaná **zálohová faktura / proforma** na **50 % ceny pobytu** se splatností **5 kalendářních dnů**, zákazníkovi se odešle e-mail s odkazem na doklad a QR platbu. Stav **Čeká na úhradu zálohy** je pouze interní. Termín se stále veřejně zobrazuje jako volný.
-- **Záloha přijata – potvrdit:** provést až po skutečném připsání peněz na účet; označí proformu zaplacenou, potvrdí pobyt, zobrazí termín jako obsazený, odešle potvrzení a vygeneruje výzvu k doplatku zbývajících **50 %**, rovněž s QR platbou.
+- **Odsouhlasit nabídku – vystavit doklad:** při příjezdu za více než 5 kalendářních dnů vzniká číslovaná **zálohová faktura / proforma** na **50 % ceny pobytu** se splatností **5 kalendářních dnů**. Při příjezdu **nejvýše za 5 kalendářních dnů** vzniká přímo číslovaná **faktura na 100 % ceny ubytování** se splatností ihned. **PDF faktura s QR platbou je přílohou e-mailu**, vedle toho zákazník dostane původní odkaz. Stav čekání na platbu je interní a termín ještě není blokován.
+- **Platba přijata – potvrdit:** provést až po skutečném připsání příslušné platby na účet. U standardní rezervace potvrdí 50% zálohu a vygeneruje výzvu k doplatku zbývajících 50 %. **U last-minute faktury 100 %** označí doklad jako zaplacený, potvrdí termín a **nevytvoří žádný další doplatek ani duplicitní zúčtovací fakturu**.
 - **Doplatek přijat – vystavit vyúčtování:** po potvrzení platby v administraci uloží zaplacení doplatku a vytvoří číslovanou **vyúčtovací fakturu** na celkovou cenu s odečtením zálohy a doplatku (k úhradě 0 Kč). Doklad se automaticky odešle zákazníkovi.
 - **Vratná kauce 5 000 Kč** se eviduje odděleně od ubytování podle VOP: připsání 2 kalendářní dny před příjezdem, vrácení nevyčerpané kauce do 5 kalendářních dnů po odjezdu.
 
@@ -23,10 +23,11 @@ Používá se **varianta 1 / A – Přírodní elegance**: krémový list A4, tm
 
 
 - Zálohová faktura: řada **ZROK-0001**, proforma (nikoli daňový doklad).
+- Jednorázová faktura na 100 %: řada **FROK-0001** společná s vyúčtovacími fakturami; vydává se pouze u last-minute pobytů po odsouhlasení nabídky.
 - Výzva na doplatek: řada **DROK-0001**, nikoli daňový doklad.
 - Vyúčtovací faktura: řada **FROK-0001**.
 - Pro platební převody je u pobytu jednotný číselný **variabilní symbol**.
-- QR platba používá standard **SPAYD** a český IBAN. QR kód se vykresluje lokálně pomocí knihovny qrcodejs (MIT) na dokladech s částkou k úhradě. Na plně uhrazeném vyúčtování se QR platba nezobrazuje, protože zbývá uhradit 0 Kč.
+- QR platba používá standard **SPAYD** a český IBAN. Ve webovém náhledu se kód vytváří místně pomocí knihovny qrcodejs (MIT), **v PDF je nativní QR kód vytvořen serverovou knihovnou TCPDF** (LGPL). Na uhrazených dokladech se QR platba nezobrazuje. PDF generuje přímo server, bez externí služby, a přikládá jej k zálohovým i 100% fakturám.
 - Doklady mají nezaměnitelné číselné řady a ukládají se jako snímky údajů v soukromém souboru `.hlinenka-private/reservations.json`. Doklady je možné otevřít, vytisknout nebo z prohlížeče **uložit jako PDF**.
 - Zákazník dostane e-mailem obtížně uhodnutelný odkaz na svůj konkrétní doklad. Sdílet jej pouze s oprávněným příjemcem.
 - Vystavené doklady nelze smazat vymazáním rezervace; případná oprava nebo dobropis vyžaduje zvláštní řešení.

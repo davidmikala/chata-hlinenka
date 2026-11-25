@@ -120,6 +120,7 @@ export default function Booking() {
   const [feedback, setFeedback] = useState(null);
   const nameInputRef = useRef(null);
   const currentQuote = quote(pricing, start, end);
+  const lastMinutePayment = Boolean(start && dateDiff(today, start) >= 0 && dateDiff(today, start) <= 5);
   const conflict = Boolean(start && end && occupied.some((r) => start < r.end && end > r.start));
   const validDates = loaded && currentQuote && currentQuote.nights >= currentQuote.min && !conflict && start >= today;
 
@@ -263,6 +264,7 @@ export default function Booking() {
                     <strong>{currentQuote.total !== null ? currency(currentQuote.total) : 'Cena na vyžádání'}</strong>
                     {currentQuote.nights < currentQuote.min && <span className="booking__invalid">Minimální délka pobytu: {currentQuote.min} nocí.</span>}
                     <small>Cena dle schváleného ceníku za celý pobyt. Termín i konečnou cenu potvrdíme osobně. Cena pobytu nezahrnuje spotřebovanou elektrickou energii (7 Kč/kWh). Vratná kauce činí 5 000 Kč a není součástí ceny.</small>
+                    {lastMinutePayment && <small><strong>Rezervace na poslední chvíli:</strong> Do příjezdu zbývá nejvýše 5 dní. Po odsouhlasení nabídky zašleme e-mailem fakturu na celou cenu pobytu (100 %) v příloze PDF. Termín potvrdíme po přijetí platby.</small>}
                   </>
                 ) : <span>Vyberte termín pro orientační kalkulaci pobytu.</span>}
               </div>
