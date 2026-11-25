@@ -1238,12 +1238,19 @@ if ($action === 'resend-invoice') {
     if (!$inv || !filter_var($inv['customerEmail'] ?? '', FILTER_VALIDATE_EMAIL)) err('Doklad nebyl nalezen nebo chybí e-mail.',404);
     if (($inv['status'] ?? '') === 'cancelled') err('Zrušený doklad nelze znovu odeslat jako platební výzvu.',409);
     $link = invoice_public_link($inv);
-    $sent = send_mail_text($inv['customerEmail'], $inv['type'] === 'deposit'
-            ? 'Zálohová faktura k pobytu – Chata Hliněnka'
-            : ($inv['type'] === 'balance' ? 'Podklady pro doplatek pobytu – Chata Hliněnka' : 'Vyúčtování pobytu – Chata Hliněnka'),
-        "Dobrý den,\n\nzasíláme vám doklad ".$inv['number']." k pobytu na Chatě Hliněnka ("
-          .$inv['dateStart']." – ".$inv['dateEnd'].").\n\nDoklad k zobrazení, tisku a uložení jako PDF:\n".$link
-          ."\n\nS pozdravem\nChata Hliněnka", OWNER_MAIL);
+    $isAttached = in_array($inv['type'], ['deposit', 'full'], true);
+    $subject = $inv['type'] === 'deposit' ? 'Zálohová faktura k pobytu – Chata Hliněnka'
+        : ($inv['type'] === 'full' ? 'Faktura za celý pobyt – Chata Hliněnka'
+            : ($inv['type'] === 'balance' ? 'Podklady pro doplatek pobytu – Chata Hliněnka'
+                : 'Vyúčtování pobytu – Chata Hliněnka'));
+    $message = "Dobrý den,\n\nzasíláme vám doklad ".$inv['number']." k pobytu na Chatě Hliněnka ("
+        .$inv['dateStart']." – ".$inv['dateEnd'].").\n\n"
+        .($isAttached ? "PDF fakturu najdete v příloze tohoto e-mailu.\n" : '')
+        ."Doklad si můžete znovu otevřít, vytisknout či uložit zde:\n".$link
+        ."\n\nS pozdravem\nChata Hliněnka";
+    $sent = $isAttached
+        ? send_invoice_pdf($inv, $subject, $message)
+        : send_mail_text((string)$inv['customerEmail'], $subject, $message, OWNER_MAIL);
     send_json(['ok'=>true,'notified'=>$sent]);
 }
 if ($action === 'record-balance') {
