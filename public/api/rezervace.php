@@ -960,7 +960,7 @@ $action = (string)($_GET['action'] ?? 'calendar');
 
 if ($method === 'GET') {
     if ($action === 'calendar' || $action === 'admin') echalupy_refresh();
-    if ($action === 'invoice-view') {
+    if ($action === 'invoice-view' || $action === 'invoice-pdf') {
         $token = (string)($_GET['token'] ?? '');
         if (!preg_match('/^[0-9a-f]{48}$/D', $token)) err('Doklad nebyl nalezen.', 404);
         $inv = data_store(function(array &$d, bool &$save) use ($token) {
@@ -970,6 +970,21 @@ if ($method === 'GET') {
             return null;
         });
         if ($inv === null) err('Doklad nebyl nalezen.', 404);
+        if ($action === 'invoice-pdf') {
+            try {
+                $pdfBytes = invoice_pdf_bytes($inv);
+            } catch (Throwable $e) {
+                error_log('Hlinenka: PDF ke stazeni nelze vytvorit: '.$e->getMessage());
+                err('PDF doklad není aktuálně dostupný. Kontaktujte ubytovatele.', 503);
+            }
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="'.$inv['number'].'.pdf"');
+            header('X-Robots-Tag: noindex, nofollow, noarchive');
+            header('X-Frame-Options: DENY');
+            header('Content-Length: '.strlen($pdfBytes));
+            echo $pdfBytes;
+            exit;
+        }
         header('Content-Type: text/html; charset=utf-8');
         header('X-Robots-Tag: noindex, nofollow, noarchive');
         header('X-Frame-Options: DENY');
