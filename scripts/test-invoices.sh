@@ -29,6 +29,10 @@ get_admin() {
   curl -fsS "$API?action=admin" -H "Cookie: HLINENKA_ADMIN=$SESSION_ID"
 }
 test -f dist/js/qrcode.min.js
+# První přístup migruje výchozí fakturační údaje skutečného ubytovatele,
+# aniž by automaticky odhadoval režim DPH.
+get_admin | jq -e '.billingSettings.sellerName=="David Mikala" and .billingSettings.sellerId=="74743881" and .billingSettings.bankAccount=="6052704445/6363" and .billingSettings.iban=="CZ6363630000006052704445" and .billingSettings.vatMode=="" and .billingReady==false'
+get_admin | jq -e '.billingSettings.sellerAddress|contains("Míškovice 177")'
 request billing-settings '{"sellerName":"Testovaci ubytovatel","sellerAddress":"Testovaci 1, 768 41 Bystrice pod Hostynem","sellerId":"12345678","sellerVatId":"","vatMode":"nonvat","iban":"CZ6508000000192000145399","bankAccount":"19-2000145399/0800"}' | jq -e '.ok==true and .ready==true'
 request inquiry '{"name":"Zkusebni host","phone":"+420123456789","email":"zakaznik@example.cz","people":2,"start":"2029-04-09","end":"2029-04-11","message":"Test fakturace"}' | jq -e '.ok==true and .saved==true'
 R=$(get_admin | jq -r '.records[0].id')
@@ -42,6 +46,10 @@ INV_TOKEN=$(get_admin | jq -r '.invoices[0].token')
 curl -fsS "$API?action=invoice-view&token=$INV_TOKEN" > "$TEMP_DIR/invoice.html"
 grep -q 'SPD\*1.0\*ACC:' "$TEMP_DIR/invoice.html"
 grep -q 'QR' "$TEMP_DIR/invoice.html"
+grep -Fq 'HOSTÝNSKÉ VRCHY' "$TEMP_DIR/invoice.html"
+grep -Fq '/email/logo-hlinenka-prirodni.jpg' "$TEMP_DIR/invoice.html"
+grep -Fq '7 Kč/kWh' "$TEMP_DIR/invoice.html"
+grep -Fq 'ZÁLOHOVÁ FAKTURA' "$TEMP_DIR/invoice.html"
 request decision "$(jq -nc --arg id "$R" '{id:$id,status:"approved"}')" | jq -e '.ok==true'
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==1'
 get_admin | jq -e '.invoices|length==2'
@@ -49,6 +57,12 @@ get_admin | jq -e '.invoices[1].type=="balance" and .invoices[1].amount==10000'
 request record-balance "$(jq -nc --arg id "$R" '{id:$id}')" | jq -e '.ok==true'
 get_admin | jq -e '.invoices|length==3'
 get_admin | jq -e '.invoices[2].type=="final" and .invoices[2].amount==0 and .invoices[2].status=="paid"'
+FINAL_TOKEN=$(get_admin | jq -r '.invoices[2].token')
+curl -fsS "$API?action=invoice-view&token=$FINAL_TOKEN" > "$TEMP_DIR/final.html"
+grep -Fq 'ZÚČTOVACÍ FAKTURA' "$TEMP_DIR/final.html"
+grep -Fq 'PLNĚ UHRAZENO' "$TEMP_DIR/final.html"
+grep -Fq 'Zbývá k úhradě' "$TEMP_DIR/final.html"
+if grep -Fq 'id="payment-qr"' "$TEMP_DIR/final.html"; then echo 'QR platba se nesmí zobrazit na uhrazené faktuře'; exit 1; fi
 code=$(curl -sS -o "$TEMP_DIR/delete.json" -w '%{http_code}' -H "Cookie: HLINENKA_ADMIN=$SESSION_ID" -H 'Content-Type: application/json' \
   -d "$(jq -nc --arg id "$R" '{id:$id}')" "$API?action=delete")
 test "$code" = "409"
