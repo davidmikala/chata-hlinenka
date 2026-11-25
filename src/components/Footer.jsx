@@ -73,6 +73,14 @@ export default function Footer() {
           </div>
         </div>
 
+        <div className="footer__dm-system" aria-label="Rezervační systém DM – vlastní řešení Davida Mikaly">
+          <span className="footer__dm-monogram" aria-hidden="true">DM</span>
+          <span className="footer__dm-copy">
+            <strong>Rezervační systém DM</strong>
+            <small>Vlastní řešení · David Mikala</small>
+          </span>
+        </div>
+
         <div className="footer__bottom">
           <p>© 2026 Chata Hliněnka</p>
           <div className="footer__legal">
