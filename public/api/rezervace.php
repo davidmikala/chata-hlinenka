@@ -1062,13 +1062,18 @@ if ($action === 'inquiry') {
     $phone = required_text($body['phone'] ?? null, 40, 'telefon');
     $email = required_text($body['email'] ?? null, 150, 'e-mail');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) err('Zkontrolujte e-mail.');
-    $people = filter_var($body['people'] ?? null, FILTER_VALIDATE_INT);
-    if ($people === false || $people < 1 || $people > 12) err('Počet hostů musí být mezi 1 a 12.');
+    $adults = filter_var($body['adults'] ?? $body['people'] ?? null, FILTER_VALIDATE_INT);
+    $children = filter_var($body['children'] ?? 0, FILTER_VALIDATE_INT);
+    if ($adults === false || $adults < 1 || $adults > 12 || $children === false || $children < 0 || $children > 11 || $adults + $children > 12) err('Celkový počet hostů musí být mezi 1 a 12.');
+    $people = $adults + $children;
+    $street = required_text($body['street'] ?? null, 150, 'ulici a číslo');
+    $city = required_text($body['city'] ?? null, 150, 'PSČ a obec');
+    $address = $street . ', ' . $city;
     $message = trim((string)($body['message'] ?? ''));
     if (mb_strlen($message, 'UTF-8') > 2000) err('Zpráva je příliš dlouhá.');
     // Nenápadná ochrana proti botům.
     if (trim((string)($body['website'] ?? '')) !== '') send_json(['ok' => true]);
-    $result = data_store(function(array &$d, bool &$save) use($start, $end, $name, $phone, $email, $people, $message, $nights) {
+    $result = data_store(function(array &$d, bool &$save) use($start, $end, $name, $phone, $email, $people, $adults, $children, $address, $message, $nights) {
         if (overlaps($d['records'] ?? [], $start, $end) || echalupy_conflict($d, $start, $end)) {
             return ['error' => 'Zvolený termín je obsazený v kalendáři Chaty Hliněnka nebo e-chalupy.cz.'];
         }
@@ -1080,7 +1085,7 @@ if ($action === 'inquiry') {
         if (($d['ip_times'][$ip] ?? 0) > $now - 45) return ['error' => 'Další poptávku lze odeslat až za chvíli.'];
         $d['ip_times'][$ip] = $now;
         $record = ['id' => bin2hex(random_bytes(12)), 'start' => $start, 'end' => $end, 'name' => $name,
-            'phone' => $phone, 'email' => $email, 'people' => $people, 'message' => $message,
+            'phone' => $phone, 'email' => $email, 'people' => $people, 'adults' => $adults, 'children' => $children, 'address' => $address, 'billingAddress' => $address, 'message' => $message,
             'price' => $q['total'], 'status' => 'pending', 'source' => 'Web', 'createdAt' => date(DATE_ATOM)];
         $d['records'][] = $record;
         $save = true;
@@ -1088,7 +1093,7 @@ if ($action === 'inquiry') {
     });
     if (isset($result['error'])) err($result['error'], 409);
     $r = $result['record'];
-    $text = "Nová poptávka Chaty Hliněnka\n\nJméno: $name\nE-mail: $email\nTelefon: $phone\nPočet hostů: $people\nTermín: $start až $end\nNocí: $nights\n"
+    $text = "Nová poptávka Chaty Hliněnka\n\nJméno: $name\nE-mail: $email\nTelefon: $phone\nAdresa: $address\nDospělí: $adults\nDěti: $children\nCelkem hostů: $people\nTermín: $start až $end\nNocí: $nights\n"
         . "Orientační cena: ".($r['price'] === null ? 'Na vyžádání' : number_format($r['price'], 0, ',', ' ').' Kč')
         . "\nPoznámka: $message\n\nČeká na schválení. Správa: https://www.chatahlinenka.cz/sprava-rezervaci.html";
     $notified = send_mail_text(OWNER_MAIL, 'Nová poptávka ubytování – Chata Hliněnka', $text, $email);
