@@ -1388,26 +1388,43 @@ if ($action === 'decision') {
     $sent = true;
     if (!empty($r['email'])) {
         if ($status === 'awaiting_deposit') {
+            $isFull = $invoice['type'] === 'full';
             $text = "Dobrý den,\n\nVaši poptávku na Chatu Hliněnka jsme předběžně odsouhlasili a zasíláme "
               ."platební podklady k rezervaci termínu ".$r['start']." až ".$r['end'].".\n\n"
-              ."Zálohová faktura č. ".$invoice['number']."\n"
-              ."Záloha (50 % ceny pobytu): ".money_cz((int)$invoice['amount'])."\n"
-              ."Splatnost: ".date_cz($invoice['due'])." (5 kalendářních dnů)\n"
+              .($isFull ? "Faktura na celou cenu pobytu č. " : "Zálohová faktura č. ").$invoice['number']."\n"
+              .($isFull ? "Celá cena ubytování (100 %): " : "Záloha (50 % ceny pobytu): ")
+              .money_cz((int)$invoice['amount'])."\n"
+              ."Splatnost: ".date_cz($invoice['due'])
+              .($isFull ? " (úhrada ihned, nejpozději před příjezdem)\n" : " (5 kalendářních dnů)\n")
               ."Variabilní symbol: ".$invoice['variableSymbol']."\n\n"
-              ."Faktura s QR platbou – otevřít, vytisknout nebo uložit jako PDF:\n"
-              .invoice_public_link($invoice)."\n\n"
-              ."Rezervace se stane závaznou až po vašem odsouhlasení nabídky a našem písemném potvrzení. "
-              ."To zašleme po připsání zálohy na účet.\n\nS pozdravem\nChata Hliněnka";
-            $sent = send_mail_text($r['email'], 'Zálohová faktura k rezervaci – Chata Hliněnka', $text, OWNER_MAIL);
+              ."PDF fakturu najdete v příloze tohoto e-mailu. QR platba je součástí PDF.\n"
+              ."Doklad můžete opětovně otevřít zde:\n".invoice_public_link($invoice)."\n\n"
+              ."Termín se stane závaznou rezervací po vašem odsouhlasení nabídky, připsání "
+              .($isFull ? "celé částky" : "zálohy")." a našem písemném potvrzení.\n\nS pozdravem\nChata Hliněnka";
+            $sent = send_invoice_pdf($invoice,
+                $isFull ? 'Faktura za celý pobyt – Chata Hliněnka'
+                        : 'Zálohová faktura k rezervaci – Chata Hliněnka',
+                $text);
         } elseif ($status === 'approved') {
-            $text = "Dobrý den,\n\npotvrzujeme váš termín pobytu na Chatě Hliněnka: "
-              .$r['start']." až ".$r['end'].".\n\n"
-              ."Záloha ".money_cz((int)$r['depositAmountPaid'])." byla přijata. "
-              ."Termín je potvrzen a veden jako obsazený.\n\n"
-              ."Zbývající doplatek: ".money_cz((int)$invoice['amount']).". "
-              ."Uhraďte jej dle platebních pokynů, nejpozději před předáním chaty.\n\n"
-              ."Podklady k doplatku včetně QR platby: ".invoice_public_link($invoice)."\n\n"
-              ."Na dalších podrobnostech se domluvíme e-mailem nebo telefonicky.\nChata Hliněnka";
+            if ($invoice['type'] === 'full') {
+                $text = "Dobrý den,\n\npotvrzujeme pobyt na Chatě Hliněnka: ".$r['start']." až ".$r['end'].".\n\n"
+                    ."Přijali jsme celou cenu ubytování ".money_cz((int)$r['price']).". "
+                    ."Faktura ".$invoice['number']." byla označena jako uhrazená. "
+                    ."Žádný další doplatek ceny ubytování se nepožaduje. "
+                    ."Termín je potvrzen a veden jako obsazený.\n\n"
+                    ."Doklad: ".invoice_public_link($invoice)."\n\n"
+                    ."Vratná kauce a skutečná spotřeba elektřiny se vypořádají zvlášť dle podmínek.\n\n"
+                    ."S pozdravem\nChata Hliněnka";
+            } else {
+                $text = "Dobrý den,\n\npotvrzujeme váš termín pobytu na Chatě Hliněnka: "
+                  .$r['start']." až ".$r['end'].".\n\n"
+                  ."Záloha ".money_cz((int)$r['depositAmountPaid'])." byla přijata. "
+                  ."Termín je potvrzen a veden jako obsazený.\n\n"
+                  ."Zbývající doplatek: ".money_cz((int)$invoice['amount']).". "
+                  ."Uhraďte jej dle platebních pokynů, nejpozději před předáním chaty.\n\n"
+                  ."Podklady k doplatku včetně QR platby: ".invoice_public_link($invoice)."\n\n"
+                  ."Na dalších podrobnostech se domluvíme e-mailem nebo telefonicky.\nChata Hliněnka";
+            }
             $sent = send_mail_text($r['email'], 'Potvrzení pobytu – Chata Hliněnka', $text, OWNER_MAIL);
         } else {
             $text = "Bohužel nemůžeme potvrdit vámi poptávaný termín na Chatě Hliněnka: "
@@ -1416,11 +1433,13 @@ if ($action === 'decision') {
         }
     }
     if ($status === 'awaiting_deposit') {
+        $kindMessage = $invoice['type'] === 'full' ? 'Faktura na 100 % ceny' : 'Zálohová faktura';
         send_json(['ok'=>true, 'notified'=>$sent, 'invoice'=>$invoice['number'],
-            'message'=>$sent ? 'Zálohová faktura vystavena a e-mail předán poštovní službě. Termín není blokován.'
-                            : 'Zálohová faktura vystavena, ale e-mail se nepodařilo předat. Otevřete doklad a odešlete jej ručně.']);
+            'fullPayment'=>$invoice['type'] === 'full',
+            'message'=>$sent ? $kindMessage.' vystavena a odeslána zákazníkovi jako PDF příloha. Termín zatím není blokován.'
+                            : $kindMessage.' vystavena, ale odeslání PDF přílohy se nepodařilo. Ověřte SMTP/PDF a použijte Znovu poslat.']);
     }
-    send_json(['ok'=>true,'notified'=>$sent]);
+    send_json(['ok'=>true,'notified'=>$sent,'fullPayment'=>($invoice['type'] ?? '') === 'full']);
 }
 if ($action === 'block') {
     $start = (string)($body['start'] ?? ''); $end = (string)($body['end'] ?? '');
