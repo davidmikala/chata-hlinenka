@@ -239,6 +239,7 @@ export default function Booking() {
             <div className="booking__rules" aria-label="Pravidla ubytování">
               <p><strong>Bez domácích zvířat</strong> – domácím mazlíčkům není vstup povolen.</p>
               <p><strong>Nekuřácké ubytování</strong> – zákaz kouření ve všech budovách včetně stodoly.</p>
+              <p><strong>Elektrická energie</strong> – není zahrnuta v ceně ubytování. Hradí se zvlášť podle skutečné spotřeby, za cenu <strong>7 Kč/kWh</strong>.</p>
             </div>
             <form onSubmit={submit} className="booking__request-form">
               <div className="booking__input-row">
@@ -261,7 +262,7 @@ export default function Booking() {
                     <span>{currentQuote.label} · {dateCZ(start)} – {dateCZ(end)} · {currentQuote.nights} nocí</span>
                     <strong>{currentQuote.total !== null ? currency(currentQuote.total) : 'Cena na vyžádání'}</strong>
                     {currentQuote.nights < currentQuote.min && <span className="booking__invalid">Minimální délka pobytu: {currentQuote.min} nocí.</span>}
-                    <small>Cena dle schváleného ceníku za celý pobyt. Termín i konečnou cenu potvrdíme osobně. Vratná kauce 5 000 Kč není součástí ceny.</small>
+                    <small>Cena dle schváleného ceníku za celý pobyt. Termín i konečnou cenu potvrdíme osobně. Cena pobytu nezahrnuje spotřebovanou elektrickou energii (7 Kč/kWh). Vratná kauce činí 5 000 Kč a není součástí ceny.</small>
                   </>
                 ) : <span>Vyberte termín pro orientační kalkulaci pobytu.</span>}
               </div>
