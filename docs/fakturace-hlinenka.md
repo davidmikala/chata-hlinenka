@@ -17,6 +17,11 @@
 
 ## Doklady
 
+### Schválená jednotná šablona
+
+Používá se **varianta 1 / A – Přírodní elegance**: krémový list A4, tmavě zelené záhlaví, zlatá linka, originální logo Chaty Hliněnka, krémový blok dodavatele a odběratele, přehledná tabulka, tmavě zelený součet a patička. Stejný vzhled používá zálohová faktura, výzva k doplatku a konečné vyúčtování. QR platba se zobrazuje jen u **nezaplaceného** dokladu s nenulovou částkou, u uhrazených dokladů ne. Na dokladu je uvedeno, že elektřina 7 Kč/kWh dle skutečné spotřeby a vratná kauce 5 000 Kč se účtují mimo cenu ubytování.
+
+
 - Zálohová faktura: řada **ZROK-0001**, proforma (nikoli daňový doklad).
 - Výzva na doplatek: řada **DROK-0001**, nikoli daňový doklad.
 - Vyúčtovací faktura: řada **FROK-0001**.
