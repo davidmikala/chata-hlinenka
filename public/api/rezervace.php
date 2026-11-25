@@ -83,6 +83,17 @@ function data_store(callable $fn): mixed {
             $d['billingIdentityRevision'] = 1;
             $save = true;
         }
+        // Provozovatel David Mikala (IČO 74743881) výslovně potvrdil,
+        // že není plátcem DPH. Uložit tuto volbu jednorázově, aby se
+        // promítla i do existujícího soukromého nastavení na hostingu.
+        // Novější ruční změny v administraci pak už tato migrace nemění.
+        if ((int)($d['billingVatRevision'] ?? 0) < 1) {
+            $billing = is_array($d['billingSettings'] ?? null) ? $d['billingSettings'] : [];
+            $billing['vatMode'] = 'nonvat';
+            $d['billingSettings'] = $billing;
+            $d['billingVatRevision'] = 1;
+            $save = true;
+        }
         $result = $fn($d, $save);
         if ($save) {
             $json = json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -574,15 +585,15 @@ HTML;
 function billing_settings(array $d): array {
     $current = $d['billingSettings'] ?? [];
     if (!is_array($current)) $current = [];
-    // Ubytovatel potvrdil své fakturační údaje. Platný IBAN je odvozen
-    // z 6052704445/6363; skutečný režim DPH se nikdy neodhaduje.
+    // Ubytovatel potvrdil fakturační údaje i režim neplátce DPH.
+    // Platný IBAN je odvozen z 6052704445/6363.
     // Existující vyplněná soukromá nastavení mají přednost.
     $defaults = [
         'sellerName' => 'David Mikala',
         'sellerAddress' => "Míškovice 177\n768 52 Míškovice",
         'sellerId' => '74743881',
         'sellerVatId' => '',
-        'vatMode' => '',
+        'vatMode' => 'nonvat',
         'iban' => 'CZ6363630000006052704445',
         'bankAccount' => '6052704445/6363',
     ];

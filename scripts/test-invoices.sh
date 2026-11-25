@@ -29,9 +29,10 @@ get_admin() {
   curl -fsS "$API?action=admin" -H "Cookie: HLINENKA_ADMIN=$SESSION_ID"
 }
 test -f dist/js/qrcode.min.js
-# První přístup migruje výchozí fakturační údaje skutečného ubytovatele,
-# aniž by automaticky odhadoval režim DPH.
-get_admin | jq -e '.billingSettings.sellerName=="David Mikala" and .billingSettings.sellerId=="74743881" and .billingSettings.bankAccount=="6052704445/6363" and .billingSettings.iban=="CZ6363630000006052704445" and .billingSettings.vatMode=="" and .billingReady==false'
+# První přístup migruje výchozí fakturační údaje skutečného ubytovatele
+# i výslovně potvrzený režim neplátce DPH. Ukládání nesmí mazat ostatní data.
+get_admin | jq -e '.billingSettings.sellerName=="David Mikala" and .billingSettings.sellerId=="74743881" and .billingSettings.bankAccount=="6052704445/6363" and .billingSettings.iban=="CZ6363630000006052704445" and .billingSettings.vatMode=="nonvat" and .billingReady==true'
+get_admin | jq -e '.billingSettings.vatMode=="nonvat" and .billingReady==true'
 get_admin | jq -e '.billingSettings.sellerAddress|contains("Míškovice 177")'
 request billing-settings '{"sellerName":"Testovaci ubytovatel","sellerAddress":"Testovaci 1, 768 41 Bystrice pod Hostynem","sellerId":"12345678","sellerVatId":"","vatMode":"nonvat","iban":"CZ6508000000192000145399","bankAccount":"19-2000145399/0800"}' | jq -e '.ok==true and .ready==true'
 request inquiry '{"name":"Zkusebni host","phone":"+420123456789","email":"zakaznik@example.cz","people":2,"start":"2029-04-09","end":"2029-04-11","message":"Test fakturace"}' | jq -e '.ok==true and .saved==true'
@@ -50,6 +51,7 @@ grep -Fq 'HOSTÝNSKÉ VRCHY' "$TEMP_DIR/invoice.html"
 grep -Fq '/email/logo-hlinenka-prirodni.jpg' "$TEMP_DIR/invoice.html"
 grep -Fq '7 Kč/kWh' "$TEMP_DIR/invoice.html"
 grep -Fq 'ZÁLOHOVÁ FAKTURA' "$TEMP_DIR/invoice.html"
+grep -Fq 'Nejsme plátci DPH.' "$TEMP_DIR/invoice.html"
 request decision "$(jq -nc --arg id "$R" '{id:$id,status:"approved"}')" | jq -e '.ok==true'
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==1'
 get_admin | jq -e '.invoices|length==2'
