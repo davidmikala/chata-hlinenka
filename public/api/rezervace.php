@@ -1276,6 +1276,9 @@ if ($action === 'record-balance') {
             if (($r['status'] ?? '') !== 'approved' || empty($r['depositPaidAt'])) {
                 return ['error'=>'Rezervace není potvrzena po přijetí zálohy.'];
             }
+            if (invoice_record($d, $id, 'full') || !empty($r['invoiceFullId'])) {
+                return ['error'=>'Tento pobyt má jednorázovou fakturu na 100 %. Další doplatek ani vyúčtování se nevystavuje.'];
+            }
             if (!empty($r['balancePaidAt']) || invoice_record($d, $id, 'final')) {
                 return ['error'=>'Doplatek už je evidován.'];
             }
