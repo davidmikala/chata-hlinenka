@@ -783,7 +783,7 @@ function invoice_html(array $inv): string {
     $dueRow = $final
         ? '<div class="line"><span>Stav platby</span><span>Uhrazeno</span></div>'
         : '<div class="line"><span>Splatnost</span><span>'.htmlsafe($due).'</span></div>';
-    $amountLabel = $final ? 'Zbývá k úhradě' : 'Částka k úhradě';
+    $amountLabel = $final ? 'Zbývá k úhradě' : ($status === 'paid' ? 'Uhrazeno' : 'Částka k úhradě');
     $rows = '<tr><td>Ubytování – Chata Hliněnka<br><span class="minor">'.$stay.' · '.$nights.' nocí</span></td><td>'.$total.'</td></tr>';
     if ($final) {
         $rows .= '<tr><td>Uhrazená záloha</td><td>− '.$paid.'</td></tr>';
