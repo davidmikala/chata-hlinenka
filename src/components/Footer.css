@@ -238,3 +238,34 @@
     justify-content: center;
   }
 }
+
+/* Nenápadné označení vlastního rezervačního systému v patičce. */
+.footer__dm-system {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  max-width: 100%;
+}
+.footer__dm-monogram {
+  display: grid;
+  flex: 0 0 54px;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 253, 249, .24);
+  border-radius: 11px;
+  background: #234d3b;
+  color: #fff;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: .03em;
+}
+.footer__dm-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--bg-extra-light);
+  line-height: 1.4;
+}
+.footer__dm-copy strong { font-size: 15px; font-weight: 700; }
+.footer__dm-copy small { color: rgba(255, 253, 249, .76); font-size: 12px; }
