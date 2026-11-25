@@ -14,7 +14,14 @@ cleanup() {
 trap cleanup EXIT
 mkdir -p "$TEMP_DIR/sessions"
 printf 'admin|b:1;' > "$TEMP_DIR/sessions/sess_$SESSION_ID"
-php -d "session.save_path=$TEMP_DIR/sessions" -S 127.0.0.1:8766 -t dist > "$TEMP_DIR/server.log" 2>&1 &
+# Žádné skutečné e-maily: zachytit a zkontrolovat MIME přílohu přes PHP mail().
+export HLINENKA_TEST_MAIL_CAPTURE="$TEMP_DIR/last-email.eml"
+cat > "$TEMP_DIR/fake-sendmail.sh" <<'SH'
+#!/bin/sh
+cat > "$HLINENKA_TEST_MAIL_CAPTURE"
+SH
+chmod +x "$TEMP_DIR/fake-sendmail.sh"
+php -d "sendmail_path=$TEMP_DIR/fake-sendmail.sh" -d "session.save_path=$TEMP_DIR/sessions" -S 127.0.0.1:8766 -t dist > "$TEMP_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 for i in {1..30}; do
   if curl -fsS "$API?action=health" > /dev/null 2>&1; then break; fi
@@ -46,6 +53,17 @@ request decision "$(jq -nc --arg id "$R" '{id:$id,status:"awaiting_deposit"}')" 
 curl -fsS "$API?action=calendar" | jq -e '.occupied|length==0'
 get_admin | jq -e '.invoices|length==1'
 get_admin | jq -e '.invoices[0].type=="deposit" and .invoices[0].amount==10000 and (.invoices[0].number|test("^Z[0-9]{4}-0001$"))'
+python3 - "$TEMP_DIR/last-email.eml" deposit <<'PY'
+import sys,email
+from email import policy
+from email.parser import BytesParser
+msg=BytesParser(policy=policy.default).parsebytes(open(sys.argv[1],"rb").read())
+pdfs=[p for p in msg.walk() if p.get_content_type()=="application/pdf"]
+assert msg.get_content_type()=="multipart/mixed", msg.get_content_type()
+assert len(pdfs)==1 and pdfs[0].get_filename().startswith("Z20")
+assert pdfs[0].get_payload(decode=True).startswith(b"%PDF-")
+assert "20000" not in pdfs[0].get_filename()
+PY
 INV_TOKEN=$(get_admin | jq -r '.invoices[0].token')
 curl -fsS "$API?action=invoice-view&token=$INV_TOKEN" > "$TEMP_DIR/invoice.html"
 grep -q 'SPD\*1.0\*ACC:' "$TEMP_DIR/invoice.html"
@@ -97,6 +115,17 @@ LAST_ID=$(get_admin | jq -r '.records[]|select(.name=="Host posledni chvile")|.i
 request set-agreed-price "$(jq -nc --arg id "$LAST_ID" '{id:$id,price:20000}')" | jq -e '.ok==true'
 request invoice-customer "$(jq -nc --arg id "$LAST_ID" '{id:$id,name:"Host posledni chvile",address:"Test 10, 768 41 Bystrice pod Hostynem"}')" | jq -e '.ok==true'
 request decision "$(jq -nc --arg id "$LAST_ID" '{id:$id,status:"awaiting_deposit"}')" | jq -e '.ok==true and .fullPayment==true'
+python3 - "$TEMP_DIR/last-email.eml" full <<'PY'
+import sys
+from email import policy
+from email.parser import BytesParser
+msg=BytesParser(policy=policy.default).parsebytes(open(sys.argv[1],"rb").read())
+pdfs=[p for p in msg.walk() if p.get_content_type()=="application/pdf"]
+assert msg.get_content_type()=="multipart/mixed"
+assert len(pdfs)==1 and pdfs[0].get_filename().startswith("F20")
+assert pdfs[0].get_payload(decode=True).startswith(b"%PDF-")
+assert "100 %" in str(msg.get_payload(0).get_payload(decode=True).decode("utf-8")) 
+PY
 get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))|length==1'
 get_admin | jq -e --arg id "$LAST_ID" '.invoices|map(select(.reservationId==$id))[0]|.type=="full" and .amount==20000 and (.number|test("^F[0-9]{4}-0002$"))'
 LAST_TOKEN=$(get_admin | jq -r --arg id "$LAST_ID" '.invoices[]|select(.reservationId==$id)|.token')
