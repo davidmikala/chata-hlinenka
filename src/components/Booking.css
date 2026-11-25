@@ -179,3 +179,5 @@
 .booking__rules strong {font-weight:700}
 .booking__terms-note {margin:0;color:#516b5a;font-size:12px;line-height:1.6}
 .booking__terms-note a {color:#244c38;text-decoration:underline;text-underline-offset:3px;font-weight:700}
+
+.booking__guest-total { align-self: end; padding: 12px; color: #41594a; font-size: 13px; }
