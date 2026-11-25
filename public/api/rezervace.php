@@ -1316,20 +1316,35 @@ if ($action === 'decision') {
                 if (empty($r['billingAddress'])) {
                     return ['error'=>'Nejprve doplňte fakturační jméno a adresu odběratele.'];
                 }
-                if (invoice_record($d, $id, 'deposit')) return ['error'=>'Zálohová faktura už existuje.'];
+                if (invoice_record($d, $id, 'deposit') || invoice_record($d, $id, 'full')) {
+                    return ['error'=>'K rezervaci už existuje platební doklad.'];
+                }
+                if (!invoice_pdf_available()) {
+                    return ['error'=>'PDF knihovna není připravena; doklad nelze odeslat jako přílohu.'];
+                }
+                $daysUntilArrival = days_between(date('Y-m-d'), (string)$r['start']);
+                if ($daysUntilArrival < 0) {
+                    return ['error'=>'Datum příjezdu již uplynulo. Proveďte novou poptávku.'];
+                }
+                // Méně než / právě 5 dnů: pětidenní splatnost zálohy by již nestačila.
+                $fullPayment = $daysUntilArrival <= 5;
                 $year = date('Y');
                 $d['paymentSequences'] ??= [];
                 $d['paymentSequences'][$year] = (int)($d['paymentSequences'][$year] ?? 0) + 1;
                 if ($d['paymentSequences'][$year] > 999999) return ['error'=>'Vyčerpána číselná řada plateb.'];
                 $r['paymentVs'] = $year.str_pad((string)$d['paymentSequences'][$year], 6, '0', STR_PAD_LEFT);
-                $invoice = create_invoice($d, $r, 'deposit', intdiv((int)$r['price']+1, 2));
-                $r['invoiceDepositId'] = $invoice['id'];
+                $invoice = create_invoice($d, $r, $fullPayment ? 'full' : 'deposit',
+                    $fullPayment ? (int)$r['price'] : intdiv((int)$r['price']+1, 2));
+                if ($fullPayment) $r['invoiceFullId'] = $invoice['id'];
+                else $r['invoiceDepositId'] = $invoice['id'];
             }
             if ($status === 'approved') {
-                $deposit = invoice_record($d, $id, 'deposit');
-                if (!$deposit) return ['error'=>'Chybí vystavená zálohová faktura.'];
+                $full = invoice_record($d, $id, 'full');
+                $deposit = $full ?: invoice_record($d, $id, 'deposit');
+                if (!$deposit) return ['error'=>'Chybí vystavená zálohová faktura nebo faktura na celou cenu.'];
                 $r['depositPaidAt'] = date(DATE_ATOM);
                 $r['depositAmountPaid'] = (int)$deposit['amount'];
+                if ($full) $r['fullPaidAt'] = date(DATE_ATOM);
                 foreach ($d['invoices'] as &$doc) {
                     if (($doc['id'] ?? '') === $deposit['id']) {
                         $doc['status'] = 'paid'; $doc['paidAt'] = date(DATE_ATOM);
@@ -1337,8 +1352,13 @@ if ($action === 'decision') {
                     }
                 }
                 unset($doc);
-                $invoice = create_invoice($d, $r, 'balance', (int)$r['price']-(int)$deposit['amount']);
-                $r['invoiceBalanceId'] = $invoice['id'];
+                if ($full) {
+                    // Celá částka byla zaplacena: bez druhé výzvy a bez duplicitní faktury.
+                    $invoice = $full;
+                } else {
+                    $invoice = create_invoice($d, $r, 'balance', (int)$r['price']-(int)$deposit['amount']);
+                    $r['invoiceBalanceId'] = $invoice['id'];
+                }
             }
             if ($status === 'rejected') {
                 foreach ($d['invoices'] ?? [] as &$doc) {
