@@ -237,7 +237,7 @@ export default function Booking() {
             <h3>Poptávka ubytování</h3>
             <p>Odesláním poptávky nevzniká závazná rezervace. Termín zablokujeme až po našem potvrzení.</p>
             <div className="booking__rules" aria-label="Pravidla ubytování">
-              <p><strong>Bez domácích zvířat</strong> – vstup do areálu není povolen.</p>
+              <p><strong>Bez domácích zvířat</strong> – domácím mazlíčkům není vstup povolen.</p>
               <p><strong>Nekuřácké ubytování</strong> – zákaz kouření ve všech budovách včetně stodoly.</p>
             </div>
             <form onSubmit={submit} className="booking__request-form">
