@@ -26,6 +26,9 @@ jobs:
       - name: Instalovat zavislosti
         run: npm ci
 
+      - name: Nainstalovat PDF knihovnu jen pro serverové doklady
+        run: composer install --working-dir=public/api --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Overit PHP rezervacni API
         run: php -l public/api/rezervace.php
 
