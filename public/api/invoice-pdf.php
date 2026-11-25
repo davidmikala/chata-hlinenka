@@ -164,7 +164,7 @@ function invoice_pdf_bytes(array $inv): string {
     $color([255,255,255]);
     $pdf->SetFont('dejavusans','B',10);
     $pdf->SetXY(23,$boxY+3);
-    $pdf->Cell(97,10,$isFinal?'ZBÝVÁ K ÚHRADĚ':'ČÁSTKA K ÚHRADĚ',0,0,'L');
+    $pdf->Cell(97,10,$isFinal?'ZBÝVÁ K ÚHRADĚ':($isPaid?'UHRAZENO':'ČÁSTKA K ÚHRADĚ'),0,0,'L');
     $pdf->SetFont('dejavusans','B',16);
     $pdf->Cell(66,10,$money($amountDue),0,0,'R');
 
